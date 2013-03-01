@@ -55,6 +55,9 @@ module MswinBuild
 
     def run
       begin
+        orig_path = insert_path("PATH", @config["path_add"])
+        orig_include = insert_path("INCLUDE", @config["include_add"])
+        orig_lib = insert_path("LIB", @config["lib_add"])
         files = []
         Dir.mktmpdir("mswin-build", @config["tmpdir"]) do |tmpdir|
           files << baseinfo(tmpdir)
@@ -85,6 +88,10 @@ module MswinBuild
         $stderr.puts $!
         $stderr.puts $!.backtrace
         1
+      ensure
+        ENV["LIB"] = orig_lib if orig_lib
+        ENV["INCLUDE"] = orig_include if orig_include
+        ENV["PATH"] = orig_path if orig_path
       end
     end
 
@@ -95,6 +102,18 @@ module MswinBuild
 
     def h(str)
       CGI.escapeHTML(str)
+    end
+
+    def insert_path(env, add)
+      return nil unless add
+      orig = ENV[env]
+      if orig
+        add += ";" unless add[-1] == ?;
+        ENV[env] = add + orig
+      else
+        ENV[env] = add
+      end
+      orig
     end
 
     def hook_stdio(io, &blk)
