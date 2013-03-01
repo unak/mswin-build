@@ -58,6 +58,11 @@ module MswinBuild
         orig_path = insert_path("PATH", @config["path_add"])
         orig_include = insert_path("INCLUDE", @config["include_add"])
         orig_lib = insert_path("LIB", @config["lib_add"])
+        orig_env = {}
+        @config["env"].each do |name, value|
+          orig_env[name] = ENV[name]
+          ENV[name] = value
+        end
         files = []
         Dir.mktmpdir("mswin-build", @config["tmpdir"]) do |tmpdir|
           files << baseinfo(tmpdir)
@@ -89,6 +94,13 @@ module MswinBuild
         $stderr.puts $!.backtrace
         1
       ensure
+        orig_env.each_pair do |name, value|
+          if value
+            ENV[name] = value
+          else
+            ENV.delete(name)
+          end
+        end
         ENV["LIB"] = orig_lib if orig_lib
         ENV["INCLUDE"] = orig_include if orig_include
         ENV["PATH"] = orig_path if orig_path
@@ -216,7 +228,7 @@ module MswinBuild
       io.puts "#{`ver`.gsub(/\r?\n/, '')} #{ENV['OS']} #{ENV['ProgramW6432'] ? 'x64' : 'i386'}"
 
       # start
-      do_command(io, "start", @config['vcvarsall']) if @config['vcvarsall']
+      heading(io, "start")
 
       # cpu-info
       #heading(io, "cpu-info")

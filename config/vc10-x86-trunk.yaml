@@ -1,4 +1,3 @@
 baseruby:
 repository: http://svn.ruby-lang.org/repos/ruby/trunk
 logdir: logs/vc10-x86/ruby-trunk
-vcvarsall: C:/PROGRA~2/MICROS~1.0/VC/vcvarsall.bat
