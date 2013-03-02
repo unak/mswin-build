@@ -335,7 +335,9 @@ module MswinBuild
 
     define_buildmethod(:rubyspec) do |io, tmpdir|
       heading(io, "rubyspec")
+      io.puts "skipped."
       @title << "failed(rubyspec)"
+      @title << "0failed(rubyspec/)"
     end
 
     define_buildmethod(:end_) do |io, tmpdir|
@@ -395,7 +397,7 @@ module MswinBuild
           end
         end
       end
-      @title.insert(1, "#{warns}W") if warns > 0
+      @title.insert(2, "#{warns}W") if warns > 0
       open(logfile, "w") do |out|
         header(out)
         out.write IO.read(File.join(tmpdir, "gathered"))
