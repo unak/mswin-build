@@ -427,7 +427,7 @@ module MswinBuild
       filename = logfile.sub(/\.log/, ".diff")
       open(filename, "w") do |out|
         header(out)
-        out.puts %'<p>Skipped. See the <a href="#{u File.basename(logfile)}">full build log</a>.</p>'
+        out.puts %'<p>Skipped. See the <a href="#{u File.basename(logfile)}.gz">full build log</a>.</p>'
         footer(out)
       end
       logfile
