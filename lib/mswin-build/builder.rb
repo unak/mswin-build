@@ -430,7 +430,7 @@ module MswinBuild
         out.puts %'<p>Skipped. See the <a href="#{u File.basename(logfile)}.gz">full build log</a>.</p>'
         footer(out)
       end
-      logfile
+      filename
     end
 
     def gzip(file)
