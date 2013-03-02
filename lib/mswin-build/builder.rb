@@ -340,7 +340,6 @@ module MswinBuild
       heading(io, "rubyspec")
       io.puts "skipped."
       @title << "failed(rubyspec)"
-      @title << "0failed(rubyspec/)"
       @links["rubyspec"] << "skipped"
     end
 
