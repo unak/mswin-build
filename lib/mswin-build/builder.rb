@@ -86,8 +86,11 @@ module MswinBuild
           files << rubyspec(tmpdir)
           files << end_(tmpdir)
           logfile = gather_log(files, tmpdir)
+          diffile = diff(tmpdir, logfile)
           logfile = gzip(logfile)
+          gzip(difffile)
           add_recent(logfile)
+          add_summary(logfile)
         end
         0
       rescue
@@ -338,6 +341,7 @@ module MswinBuild
       io.puts "skipped."
       @title << "failed(rubyspec)"
       @title << "0failed(rubyspec/)"
+      @links["rubyspec"] << "skipped"
     end
 
     define_buildmethod(:end_) do |io, tmpdir|
@@ -353,27 +357,34 @@ module MswinBuild
 
     def header(io)
       title = @title.join(' ')
-      io.puts "<html>"
-      io.puts "  <head>"
-      io.puts "    <title>#{h title}</title>"
-      io.puts '    <meta name="author" content="mswin-build">'
-      io.puts '    <meta name="generator" content="mswin-build">'
-      io.puts "  </head>"
-      io.puts "  <body>"
-      io.puts "    <h1>#{h title}</h1>"
-      io.puts "    <ul>"
-      @links.each_value do |anchor, text, result = nil|
-        io.puts %'      <li><a href="\##{anchor}">#{text}</a>#{" #{result}" if result}</li>'
-      end
-      io.puts "    </ul>"
-      io.puts "    <pre>"
+      io.puts <<-EOH
+<html>
+  <head>
+    <title>#{h title}</title>
+    <meta name="author" content="mswin-build">
+    <meta name="generator" content="mswin-build">
+  </head>
+  <body>
+  <h1>#{h title}</h1>
+    <p>
+      <a href="../../">mswin-build</a>
+      <a href="../summary.html">summary</a>
+      <a href="../recent.html">recent</a>
+    </p>
+      EOH
     end
 
     def footer(io)
-      io.puts "    </pre>"
-      io.puts "    <hr>"
-      io.puts "  </body>"
-      io.puts "</html>"
+      io.puts <<-EOH
+    <hr>
+    <p>
+      <a href="../../">mswin-build</a>
+      <a href="../summary.html">summary</a>
+      <a href="../recent.html">recent</a>
+    </p>
+  </body>
+</html>
+      EOH
     end
 
     def gather_log(files, tmpdir)
@@ -400,7 +411,24 @@ module MswinBuild
       @title.insert(2, "#{warns}W") if warns > 0
       open(logfile, "w") do |out|
         header(out)
+        out.puts "    <ul>"
+        @links.each_value do |anchor, text, result = nil|
+          out.puts %'      <li><a href="\##{anchor}">#{text}</a>#{" #{result}" if result}</li>'
+        end
+        out.puts "    </ul>"
+        out.puts "    <pre>"
         out.write IO.read(File.join(tmpdir, "gathered"))
+        out.puts "    </pre>"
+        footer(out)
+      end
+      logfile
+    end
+
+    def diff(tmpdir, logfile)
+      filename = logfile.sub(/\.log/, ".diff")
+      open(filename, "w") do |out|
+        header(out)
+        out.puts %'<p>Skipped. See the <a href="#{u File.basename(logfile)}">full build log</a>.</p>'
         footer(out)
       end
       logfile
@@ -412,35 +440,65 @@ module MswinBuild
     end
 
     def add_recent(logfile)
-      recent = File.join(@config["logdir"], "recent.html")
+      add_recent_summary(logfile, :recent)
+    end
+
+    def add_summary(logfile)
+      add_recent_summary(logfile, :summary)
+    end
+
+    def add_recent_summary(logfile, mode)
+      if mode == :recent
+        filename = File.join(@config["logdir"], "recent.html")
+      else
+        filename = File.join(@config["logdir"], "summary.html")
+      end
       old = []
-      if File.exist?(recent)
-        open(recent, "r") do |f|
-          f.read.scan(/name="(\d+T\d{6}Z).*?a>\s*(\S.*)<br/) do |time, summary| #"
-            old << [time, summary]
+      if File.exist?(filename)
+        open(filename, "r") do |f|
+          f.read.scan(/^(<a .*?<br>)$/) do |line| #"
+            old << line
           end
         end
       end
 
       title = @title.join(' ')
-      old.unshift([File.basename(logfile, ".log.html.gz"), title])
-      open(recent, "w") do |f|
+      time = File.basename(logfile, ".log.html.gz")
+      line = %'<a href="log/#{u time}.log.html.gz" name="#{u time}">#{h time}</a> #{h title} (<a href="log/#{u time}.diff.html.gz">#{@diff ? h(@diff) : "no diff"}</a>)<br>'
+      if mode == :recent
+        old = old[0..99]
+        old.unshift(line)
+      else
+        old.push(line)
+      end
+      open(filename, "w") do |f|
         f.print <<-EOH
 <html>
   <head>
-    <title>#{h File.basename(@config['logdir'])} recent build summary (#{h @target})</title>
+    <title>#{h File.basename(@config['logdir'])} #{h mode.to_s} build summary (#{h @target})</title>
     <meta name="author" content="mswin-build">
     <meta name="generator" content="mswin-build">
   </head>
   <body>
-    <h1>#{h File.basename(@config['logdir'])} recent build summary (#{h @target})</h1>
+    <h1>#{h File.basename(@config['logdir'])} #{h mode.to_s} build summary (#{h @target})</h1>
+    <p>
+      <a href="../">mswin-build</a>
+      <a href="./summary.html">summary</a>
+      <a href="./recent.html">recent</a>
+    </p>
         EOH
 
-        old.each do |time, summary|
-          f.puts %'<a href="log/#{u time}.log.html.gz" name="#{u time}">#{h time}</a> #{h summary}<br>'
+        old.each do |line|
+          f.puts line
         end
 
         f.print <<-EOH
+    <hr>
+    <p>
+      <a href="../">mswin-build</a>
+      <a href="./summary.html">summary</a>
+      <a href="./recent.html">recent</a>
+    </p>
   </body>
 </html>
         EOH
