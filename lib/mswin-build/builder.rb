@@ -164,8 +164,8 @@ module MswinBuild
       orig_lang = ENV["LANG"]
       ENV["LANG"] = "C"
       begin
+        STDOUT.puts "+ #{command}" if $debug
         hook_stdio(io) do
-          STDOUT.puts "+ #{command}" if $debug
           puts "+ #{command}"
           $stdout.flush
           if in_builddir
