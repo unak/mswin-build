@@ -377,7 +377,7 @@ module MswinBuild
     def gather_log(files, tmpdir)
       logdir = File.join(@config["logdir"], "log")
       FileUtils.mkdir_p(logdir)
-      logfile = File.join(logdir, Time.now.utc.strftime('%Y%m%dT%H%M%SZ.log.html'))
+      logfile = File.join(logdir, @start_time.dup.utc.strftime('%Y%m%dT%H%M%SZ.log.html'))
       warns = 0
       open(File.join(tmpdir, "gathered"), "w") do |out|
         files.each_with_index do |io, i|
