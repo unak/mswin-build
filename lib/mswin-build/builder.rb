@@ -83,6 +83,7 @@ module MswinBuild
           #files << version_list(tmpdir)
           files << test_knownbug(tmpdir)
           files << test_all(tmpdir)
+          files << rubyspec(tmpdir)
           files << end_(tmpdir)
           logfile = gather_log(files, tmpdir)
           logfile = gzip(logfile)
@@ -330,6 +331,11 @@ module MswinBuild
           @title << "#{$1}F#{$2}E"
         end
       end
+    end
+
+    define_buildmethod(:rubyspec) do |io, tmpdir|
+      heading(io, "rubyspec")
+      @title << "failed(rubyspec)"
     end
 
     define_buildmethod(:end_) do |io, tmpdir|
