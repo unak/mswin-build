@@ -86,7 +86,7 @@ module MswinBuild
           files << rubyspec(tmpdir)
           files << end_(tmpdir)
           logfile = gather_log(files, tmpdir)
-          diffile = diff(tmpdir, logfile)
+          difffile = diff(tmpdir, logfile)
           logfile = gzip(logfile)
           gzip(difffile)
           add_recent(logfile)
