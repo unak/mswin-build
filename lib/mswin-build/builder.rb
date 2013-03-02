@@ -339,7 +339,6 @@ module MswinBuild
     define_buildmethod(:rubyspec) do |io, tmpdir|
       heading(io, "rubyspec")
       io.puts "skipped."
-      @title << "failed(rubyspec)"
       @links["rubyspec"] << "skipped"
     end
 
