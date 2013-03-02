@@ -208,7 +208,7 @@ module MswinBuild
     def self.define_buildmethod(method, &blk)
       define_method("bare_#{method.to_s}", blk)
       define_method(method) do |tmpdir|
-        io = open(File.join(tmpdir, method.to_s), "wb+")
+        io = open(File.join(tmpdir, method.to_s), "w+")
         begin
           __send__("bare_#{method.to_s}", io, tmpdir)
         ensure
@@ -368,10 +368,10 @@ module MswinBuild
       FileUtils.mkdir_p(logdir)
       logfile = File.join(logdir, Time.now.utc.strftime('%Y%m%dT%H%M%SZ.log.html'))
       warns = 0
-      open(File.join(tmpdir, "gathered"), "wb") do |out|
+      open(File.join(tmpdir, "gathered"), "w") do |out|
         files.each_with_index do |io, i|
           next unless io
-          io.reopen(io.path, "rb")
+          io.reopen(io.path, "r")
           begin
             io.each_line do |line|
               line = h(line) unless /^<a / =~ line
@@ -385,7 +385,7 @@ module MswinBuild
         end
       end
       @title.insert(1, "#{warns}W") if warns > 0
-      open(logfile, "wb") do |out|
+      open(logfile, "w") do |out|
         header(out)
         out.write IO.binread(File.join(tmpdir, "gathered"))
         footer(out)
@@ -402,7 +402,7 @@ module MswinBuild
       recent = File.join(@config["logdir"], "recent.html")
       old = []
       if File.exist?(recent)
-        open(recent, "rb") do |f|
+        open(recent, "r") do |f|
           f.read.scan(/name="(\d+T\d{6}Z).*?a>\s*(\S.*)<br/) do |time, summary| #"
             old << [time, summary]
           end
@@ -411,7 +411,7 @@ module MswinBuild
 
       title = @title.join(' ')
       old.unshift([File.basename(logfile, ".log.html.gz"), title])
-      open(recent, "wb") do |f|
+      open(recent, "w") do |f|
         f.print <<-EOH
 <html>
   <head>
