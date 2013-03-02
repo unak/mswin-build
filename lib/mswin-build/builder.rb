@@ -16,7 +16,7 @@ module MswinBuild
       unless h.empty?
         raise "unknown option(s): #{h}"
       end
-      @config = YAML.load(File.binread(yaml))
+      @config = YAML.load(IO.read(yaml, encoding: "utf-8"))
       @config["baseruby"] = baseruby if baseruby
       @config["bison"] ||= "bison"
       @config["svn"] ||= "svn"
@@ -380,7 +380,7 @@ module MswinBuild
           begin
             io.each_line do |line|
               line = h(line) unless /^<a / =~ line
-              out.write line.gsub(/\r/, '')
+              out.write line
               warns += line.scan(/warn/i).length
             end
           ensure
@@ -392,7 +392,7 @@ module MswinBuild
       @title.insert(1, "#{warns}W") if warns > 0
       open(logfile, "w") do |out|
         header(out)
-        out.write IO.binread(File.join(tmpdir, "gathered"))
+        out.write IO.read(File.join(tmpdir, "gathered"))
         footer(out)
       end
       logfile
