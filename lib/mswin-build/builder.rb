@@ -90,8 +90,8 @@ module MswinBuild
         end
         0
       rescue
-        $stderr.puts $!
-        $stderr.puts $!.backtrace
+        STDERR.puts $!
+        STDERR.puts $!.backtrace
         1
       ensure
         orig_env.each_pair do |name, value|
@@ -165,6 +165,7 @@ module MswinBuild
       ENV["LANG"] = "C"
       begin
         hook_stdio(io) do
+          STDOUT.puts "+ #{command}" if $debug
           puts "+ #{command}"
           $stdout.flush
           if in_builddir
@@ -185,13 +186,16 @@ module MswinBuild
           io.puts "failed(#{name})"
           @title << "failed(#{name})" if check_retval || ret.nil?
           @links[name] << "failed"
+          STDOUT.puts %'failed(#{name}) #{ret.nil? ? "because maybe command not found" : "with status #{$?.to_i / 256}"}' if $debug
         end
       rescue Timeout::Error
+        io.puts
         io.printf "|output interval exceeds %.1f seconds. (CommandTimeout)", @config["timeout"][name] || @config["timeout"]["default"]
         io.puts $!.backtrace.join("\n| ")
         io.puts "failed(#{name} CommandTimeout)"
-        @title << "failed(#{name})" if check_retval || ret.nil?
+        @title << "failed(#{name} CommandTimeout)" if check_retval
         @links[name] << "failed"
+        STDOUT.puts "failed(#{name} CommandTimeout)" if $debug
       ensure
         ENV["LANG"] = orig_lang
       end
@@ -199,6 +203,7 @@ module MswinBuild
     end
 
     def heading(io, name)
+      STDOUT.puts "== #{name}" if $debug
       anchor = u name.to_s.tr('_', '-')
       text = h name.to_s.tr('_', '-')
       io.puts %'<a name="#{anchor}">== #{text}</a> \# #{h Time.now.iso8601}'

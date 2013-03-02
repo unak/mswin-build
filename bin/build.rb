@@ -2,17 +2,27 @@
 # expected ruby 1.9.x or later.
 
 $LOAD_PATH.unshift(File.join(File.dirname(File.dirname(__FILE__))), "lib")
+require "optparse"
 require "rbconfig"
 require "mswin-build/builder"
 
-target = ARGV.shift
-unless target
-  puts "Usage: ruby #$0 <target name>"
+$debug = $DEBUG
+opt = OptionParser.new
+opt.banner = "Usage: ruby #$0 [options] <target name>"
+opt.separator ""
+opt.separator "  This script automatically loads config/<target name>.yaml."
+opt.separator ""
+opt.separator "Options:"
+opt.on('-v', '--verbose', 'Be verbose.') { $debug = true }
+
+begin
+  opt.parse!(ARGV)
+  target = ARGV.shift
+  raise "target name is not specified." unless target
+rescue RuntimeError => ex
+  puts ex.message
   puts
-  puts " ex: ruby #$0 vc10-x86-trunk"
-  puts "     ruby #$0 vc11-x64-1.9.3"
-  puts
-  puts " This script automatically loads config/<target-name>.yaml"
+  puts opt.help
   exit 1
 end
 
