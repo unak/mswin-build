@@ -153,7 +153,7 @@ module MswinBuild
       orig_lang = ENV["LANG"]
       ENV["LANG"] = "C"
       begin
-        STDOUT.puts "+ #{command}" if $debug
+        puts "+ #{command}" if $debug
         io.puts "+ #{command}"
         io.flush
         if in_builddir
@@ -173,7 +173,7 @@ module MswinBuild
           io.puts "failed(#{name})"
           @title << "failed(#{name})" if check_retval || ret.nil?
           @links[name] << "failed"
-          STDOUT.puts %'failed(#{name}) #{ret.nil? ? "because maybe command not found" : "with status #{$?.to_i / 256}"}' if $debug
+          puts %'failed(#{name}) #{ret.nil? ? "because maybe command not found" : "with status #{$?.to_i / 256}"}' if $debug
         end
       rescue Timeout::Error
         io.puts
@@ -182,7 +182,7 @@ module MswinBuild
         io.puts "failed(#{name} CommandTimeout)"
         @title << "failed(#{name} CommandTimeout)" if check_retval
         @links[name] << "failed"
-        STDOUT.puts "failed(#{name} CommandTimeout)" if $debug
+        puts "failed(#{name} CommandTimeout)" if $debug
       ensure
         ENV["LANG"] = orig_lang
       end
@@ -190,7 +190,7 @@ module MswinBuild
     end
 
     def heading(io, name)
-      STDOUT.puts "== #{name}" if $debug
+      puts "== #{name}" if $debug
       anchor = u name.to_s.tr('_', '-')
       text = h name.to_s.tr('_', '-')
       io.puts %'<a name="#{anchor}">== #{text}</a> \# #{h Time.now.iso8601}'
