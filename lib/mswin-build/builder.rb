@@ -315,6 +315,8 @@ module MswinBuild
         io.rewind
         if %r'^\d+ tests, \d+ assertions, (\d+) failures, (\d+) errors, (\d+) skips' =~ io.read
           @title << "#{$1}F#{$2}E"
+        else
+          @title << "failed(test-all)"
         end
       end
     end
