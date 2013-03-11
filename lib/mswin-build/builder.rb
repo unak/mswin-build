@@ -132,26 +132,11 @@ module MswinBuild
       orig
     end
 
-    def hook_stdio(io, &blk)
-      orig_stdout = $stdout.dup
-      orig_stderr = $stderr.dup
-      $stdout.reopen(io)
-      $stderr.reopen(io)
-      begin
-        blk.call
-      ensure
-        $stderr.flush
-        $stderr.reopen(orig_stderr)
-        $stdout.flush
-        $stdout.reopen(orig_stdout)
-      end
-    end
-
-    def spawn_with_timeout(name, command)
+    def spawn_with_timeout(name, command, io)
       ret = nil
       timeout(@config["timeout"][name] || @config["timeout"]["default"]) do
         begin
-          pid = Process.spawn(command)
+          pid = Process.spawn(command, out: io, err: io)
           if Process.waitpid(pid)
             ret = $?.success?
           end
@@ -169,20 +154,18 @@ module MswinBuild
       ENV["LANG"] = "C"
       begin
         STDOUT.puts "+ #{command}" if $debug
-        hook_stdio(io) do
-          puts "+ #{command}"
-          $stdout.flush
-          if in_builddir
-            if File.exist?(@builddir)
-              Dir.chdir(@builddir) do
-                ret = spawn_with_timeout(name, command)
-              end
-            else
-              ret = nil
+        io.puts "+ #{command}"
+        io.flush
+        if in_builddir
+          if File.exist?(@builddir)
+            Dir.chdir(@builddir) do
+              ret = spawn_with_timeout(name, command, io)
             end
           else
-            ret = spawn_with_timeout(name, command)
+            ret = nil
           end
+        else
+          ret = spawn_with_timeout(name, command, io)
         end
 
         unless ret
