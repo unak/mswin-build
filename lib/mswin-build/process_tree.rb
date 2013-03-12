@@ -17,10 +17,10 @@ module MswinBuild
     dlload "kernel32.dll", "ntdll.dll"
 
     include Fiddle::Win32Types
-    if 0.size == 4
-      typealias "ULONG_PTR", "unsigned long"
-    else
+    if /64/ =~ RUBY_PLATFORM
       typealias "ULONG_PTR", "unsigned long long"
+    else
+      typealias "ULONG_PTR", "unsigned long"
     end
     typealias "TCHAR", "char"
 
@@ -44,6 +44,7 @@ module MswinBuild
     extern "HANDLE CreateToolhelp32Snapshot(DWORD, DWORD)"
     extern "BOOL Process32First(HANDLE, VOID*)"
     extern "BOOL Process32Next(HANDLE, VOID*)"
+    extern "DWORD GetLastError(void)"
 
     def self.terminate_process_tree(pid, code = 0)
       begin
@@ -61,6 +62,8 @@ module MswinBuild
               terminated += terminate_process_tree(pe32.th32ProcessID, code)
             end
           end while Process32Next(h, pe32) != 0
+        else
+          raise sprintf("Cannot get processes: %d", GetLastError())
         end
       ensure
         CloseHandle(h) if h
