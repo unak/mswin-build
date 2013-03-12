@@ -339,7 +339,7 @@ module MswinBuild
 
       heading(io, "end")
       diff = Time.now - @start_time
-      io.printf "elapsed %.1fs = %dm %03.1fs\n", diff, diff / 60, diff - (diff / 60 * 60.0)
+      io.printf "elapsed %.1fs = %dm %04.1fs\n", diff, diff / 60, diff % 60)
     end
 
     def header(io)
