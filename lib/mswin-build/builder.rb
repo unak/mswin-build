@@ -262,6 +262,8 @@ module MswinBuild
         io.rewind
         if %r'^FAIL (\d+)/' =~ io.read
           @title << "#{$1}BFail"
+        else
+          @title << "failed(btest)"
         end
       end
     end
@@ -272,6 +274,8 @@ module MswinBuild
         io.rewind
         if %r'^not ok/test: \d+ failed (\d+)' =~ io.read
           @title << "#{$1}NotOK"
+        else
+          @title << "failed(test.rb)"
         end
       end
     end
