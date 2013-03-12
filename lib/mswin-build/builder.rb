@@ -241,7 +241,7 @@ module MswinBuild
     end
 
     define_buildmethod(:configure) do |io, tmpdir|
-      do_command(io, "configure", "win32/configure.bat --prefix=#{File.join(tmpdir --with-baseruby=#{@config['baseruby'].gsub(%r(/), '\\')}, 'install')}", true)
+      do_command(io, "configure", "win32/configure.bat --prefix=#{File.join(tmpdir, 'install')} --with-baseruby=#{@config['baseruby'].gsub(%r(/), '\\'}", true)
     end
 
     define_buildmethod(:cc_version) do |io, tmpdir|
