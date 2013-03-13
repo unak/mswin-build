@@ -92,11 +92,11 @@ module MswinBuild
           add_recent(logfile)
           add_summary(logfile)
         end
-        0
+        true
       rescue
         STDERR.puts $!
         STDERR.puts $!.backtrace
-        1
+        false
       ensure
         orig_env.each_pair do |name, value|
           if value
