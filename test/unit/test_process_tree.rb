@@ -3,7 +3,7 @@ require "mswin-build/process_tree"
 
 class TestProcessTree < Test::Unit::TestCase
   def test_s_terminate_process_tree
-    pid = Process.spawn(%(ruby -e "system('calc.exe')"))
+    pid = Process.spawn(%(ruby -e "system('more.com')"))
     sleep 1
 
     assert_nil Process.waitpid(pid, Process::WNOHANG)
