@@ -147,11 +147,13 @@ module MswinBuild
       ret
     end
 
-    def do_command(io, name, command, in_builddir = false, check_retval = true)
+    def do_command(io, name, command, in_builddir = false, check_retval = true, lang = "C")
       heading(io, name)
       ret = nil
-      orig_lang = ENV["LANG"]
-      ENV["LANG"] = "C"
+      if lang
+        orig_lang = ENV["LANG"]
+        ENV["LANG"] = lang
+      end
       begin
         puts "+ #{command}" if $debug
         io.puts "+ #{command}"
@@ -184,7 +186,7 @@ module MswinBuild
         @links[name] << "failed"
         puts "failed(#{name} CommandTimeout)" if $debug
       ensure
-        ENV["LANG"] = orig_lang
+        ENV["LANG"] = orig_lang if lang
       end
       ret
     end
@@ -314,7 +316,7 @@ module MswinBuild
     end
 
     define_buildmethod(:test_all) do |io, tmpdir|
-      ret = do_command(io, "test-all", "nmake -l TESTS=-v RUBYOPT=-w test-all", true, false)
+      ret = do_command(io, "test-all", "nmake -l TESTS=-v RUBYOPT=-w test-all", true, false, nil)
       if !ret && !ret.nil?
         io.rewind
         if %r'^\d+ tests, \d+ assertions, (\d+) failures, (\d+) errors, (\d+) skips' =~ io.read
