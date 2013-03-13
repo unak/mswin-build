@@ -137,9 +137,7 @@ module MswinBuild
       timeout(@config["timeout"][name] || @config["timeout"]["default"]) do
         begin
           pid = Process.spawn(command, out: io, err: io)
-          if Process.waitpid(pid)
-            ret = $?.success?
-          end
+          _, ret = Process.waitpid2(pid)
         rescue
           ret = nil
         end
@@ -149,7 +147,7 @@ module MswinBuild
 
     def do_command(io, name, command, in_builddir = false, check_retval = true, lang = "C")
       heading(io, name)
-      ret = nil
+      status = nil
       if lang
         orig_lang = ENV["LANG"]
         ENV["LANG"] = lang
@@ -161,21 +159,21 @@ module MswinBuild
         if in_builddir
           if File.exist?(@builddir)
             Dir.chdir(@builddir) do
-              ret = spawn_with_timeout(name, command, io)
+              status = spawn_with_timeout(name, command, io)
             end
           else
-            ret = nil
+            status = nil
           end
         else
-          ret = spawn_with_timeout(name, command, io)
+          status = spawn_with_timeout(name, command, io)
         end
 
-        unless ret
-          io.puts "exit #{$?.to_i / 256}" unless ret.nil?
+        if status.nil? || !status.success?
+          io.puts "exit #{status.to_i / 256}" unless status.nil?
           io.puts "failed(#{name})"
-          @title << "failed(#{name})" if check_retval || ret.nil?
+          @title << "failed(#{name})" if check_retval || status.nil?
           @links[name] << "failed"
-          puts %'failed(#{name}) #{ret.nil? ? "because maybe command not found" : "with status #{$?.to_i / 256}"}' if $debug
+          puts %'failed(#{name}) #{status.nil? ? "because maybe command not found" : "with status #{status.to_i / 256}"}' if $debug
         end
       rescue Timeout::Error
         io.puts
@@ -188,7 +186,7 @@ module MswinBuild
       ensure
         ENV["LANG"] = orig_lang if lang
       end
-      ret
+      status.nil? ? nil : status.success?
     end
 
     def heading(io, name)
