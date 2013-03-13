@@ -59,7 +59,7 @@ module MswinBuild
         orig_include = insert_path("INCLUDE", @config["include_add"])
         orig_lib = insert_path("LIB", @config["lib_add"])
         orig_env = {}
-        @config["env"].each do |name, value|
+        (@config["env"] || []).each do |name, value|
           orig_env[name] = ENV[name]
           ENV[name] = value
         end
