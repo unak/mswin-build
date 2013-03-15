@@ -111,6 +111,22 @@ module MswinBuild
       end
     end
 
+    def get_current_revision
+      orig_lang = ENV["LANG"]
+      ENV["LANG"] = "C"
+      begin
+        if /^Revision: (\d+)$/ =~ `#{@config['svn']} info #{@config['repository']}`
+          $1
+        else
+          nil
+        end
+      rescue
+        nil
+      ensure
+        ENV["LANG"] = orig_lang
+      end
+    end
+
     private
     def u(str)
       CGI.escape(str)

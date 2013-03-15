@@ -65,6 +65,10 @@ logdir: #{@tmpdir}
       MswinBuild::Builder.new(settings: @yaml.path)
     end
 
+    assert_raise(RuntimeError) do
+      MswinBuild::Builder.new(target: "dummy", settings: @yaml.path, foo: nil)
+    end
+
     builder = MswinBuild::Builder.new(target: "dummy", settings: @yaml.path)
     begin
       origProcess = Process
@@ -120,5 +124,23 @@ logdir: #{@tmpdir}
     assert files.reject! {|e| /\.log\.html\.gz\z/ =~ e}
     assert files.reject! {|e| /\.diff\.html\.gz\z/ =~ e}
     assert_empty files
+  end
+
+  def test_get_current_revision
+    TOPLEVEL_BINDING.eval <<-EOS
+      alias orig_backquote ` #`
+      def `(cmd) #`
+        "Revision: 12345\n"
+      end
+    EOS
+
+    begin
+      builder = MswinBuild::Builder.new(target: "dummy", settings: @yaml.path)
+      assert_equal "12345", builder.get_current_revision
+    ensure
+      TOPLEVEL_BINDING.eval <<-EOS
+        alias ` orig_backquote #`
+      EOS
+    end
   end
 end
