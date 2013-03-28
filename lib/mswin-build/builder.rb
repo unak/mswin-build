@@ -58,6 +58,12 @@ module MswinBuild
         orig_path = insert_path("PATH", @config["path_add"])
         orig_include = insert_path("INCLUDE", @config["include_add"])
         orig_lib = insert_path("LIB", @config["lib_add"])
+        if @config["tmpdir"]
+          orig_tmp = ENV["TMP"]
+          ENV["TMP"] = @config["tmpdir"]
+          orig_temp = ENV["TEMP"]
+          ENV["TEMP"] = @config["tmpdir"]
+        end
         orig_env = {}
         (@config["env"] || []).each do |name, value|
           orig_env[name] = ENV[name]
@@ -105,6 +111,8 @@ module MswinBuild
             ENV.delete(name)
           end
         end
+        ENV["TEMP"] = orig_temp if orig_temp
+        ENV["TMP"] = orig_tmp if orig_tmp
         ENV["LIB"] = orig_lib if orig_lib
         ENV["INCLUDE"] = orig_include if orig_include
         ENV["PATH"] = orig_path if orig_path
@@ -125,6 +133,24 @@ module MswinBuild
       ensure
         ENV["LANG"] = orig_lang
       end
+    end
+
+    def get_last_revision
+      recent = File.join(@config["logdir"], "recent.html")
+      return nil unless File.exist?(recent)
+      file = nil
+      open(recent, "r") do |f|
+        f.read.scan(/^(<a href="(.+?)".*?<br>)$/) do |line|
+          file = File.basename($1)
+          break
+        end
+      end
+      return nil unless file
+
+      `#{@config['gzip'] -d -c #{File.join(@config['logdir'], 'log', file)}`.scan(/^(?:SVN )Revision: (\d+)$/) do |line|
+        return $1
+      end
+      nil
     end
 
     private
