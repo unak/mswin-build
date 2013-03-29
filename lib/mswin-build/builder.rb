@@ -147,7 +147,7 @@ module MswinBuild
       end
       return nil unless file
 
-      `#{@config['gzip'] -d -c #{File.join(@config['logdir'], 'log', file)}`.scan(/^(?:SVN )Revision: (\d+)$/) do |line|
+      `#{@config['gzip']} -d -c #{File.join(@config['logdir'], 'log', file)}`.scan(/^(?:SVN )Revision: (\d+)$/) do |line|
         return $1
       end
       nil
