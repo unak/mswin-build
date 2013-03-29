@@ -59,10 +59,9 @@ module MswinBuild
         orig_include = insert_path("INCLUDE", @config["include_add"])
         orig_lib = insert_path("LIB", @config["lib_add"])
         if @config["tmpdir"]
-          orig_tmp = ENV["TMP"]
-          ENV["TMP"] = @config["tmpdir"]
-          orig_temp = ENV["TEMP"]
-          ENV["TEMP"] = @config["tmpdir"]
+          @config["env"] ||= []
+          @config["env"] << ["TMP", @config["tmpdir"]]
+          @config["env"] << ["TEMP", @config["tmpdir"]]
         end
         orig_env = {}
         (@config["env"] || []).each do |name, value|
@@ -111,8 +110,6 @@ module MswinBuild
             ENV.delete(name)
           end
         end
-        ENV["TEMP"] = orig_temp if orig_temp
-        ENV["TMP"] = orig_tmp if orig_tmp
         ENV["LIB"] = orig_lib if orig_lib
         ENV["INCLUDE"] = orig_include if orig_include
         ENV["PATH"] = orig_path if orig_path
