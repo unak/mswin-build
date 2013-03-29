@@ -43,6 +43,9 @@ class TestBuilder < Test::Unit::TestCase
 baseruby: ruby
 repository: dummy_repository
 logdir: #{@tmpdir}
+tmpdir: #{@tmpdir}
+env:
+  DUMMY: foo
     EOY
     @yaml.open # rewind for reading
   end
