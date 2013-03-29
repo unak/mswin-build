@@ -60,8 +60,8 @@ module MswinBuild
         orig_lib = insert_path("LIB", @config["lib_add"])
         if @config["tmpdir"]
           @config["env"] ||= {}
-          @config["env"]["TMP"] = @config["tmpdir"]
-          @config["env"]["TEMP"] = @config["tmpdir"]
+          @config["env"]["TMP"] = @config["tmpdir"].gsub(%r(/), '\\')
+          @config["env"]["TEMP"] = @config["tmpdir"].gsub(%r(/), '\\')
         end
         orig_env = {}
         (@config["env"] || {}).each do |name, value|
