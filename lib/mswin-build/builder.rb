@@ -172,16 +172,22 @@ module MswinBuild
     end
 
     def spawn_with_timeout(name, command, io)
-      ret = nil
-      timeout(@config["timeout"][name] || @config["timeout"]["default"]) do
-        begin
-          pid = Process.spawn(command, out: io, err: io)
-          _, ret = Process.waitpid2(pid)
-        rescue
-          ret = nil
+      pid = nil
+      begin
+        ret = nil
+        timeout(@config["timeout"][name] || @config["timeout"]["default"]) do
+          begin
+            pid = Process.spawn(command, out: io, err: io)
+            _, ret = Process.waitpid2(pid)
+          rescue
+            ret = nil
+          end
         end
+        ret
+      rescue Timeout::Error => ex
+        MswinBuild::ProcessTree.terminate_process_tree(pid) if pid
+        raise ex
       end
-      ret
     end
 
     def do_command(io, name, command, in_builddir = false, check_retval = true, lang = "C")
