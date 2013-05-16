@@ -120,7 +120,7 @@ module MswinBuild
       orig_lang = ENV["LANG"]
       ENV["LANG"] = "C"
       begin
-        if /^Revision: (\d+)$/ =~ `#{@config['svn']} info #{@config['repository']}`
+        if /^(?:SVN )?Revision: (\d+)$/ =~ `#{@config['svn']} info #{@config['repository']}`
           $1
         else
           nil
@@ -144,7 +144,7 @@ module MswinBuild
       end
       return nil unless file
 
-      `#{@config['gzip']} -d -c #{File.join(@config['logdir'], 'log', file)}`.scan(/^(?:SVN )Revision: (\d+)$/) do |line|
+      `#{@config['gzip']} -d -c #{File.join(@config['logdir'], 'log', file)}`.scan(/^(?:SVN )?Revision: (\d+)$/) do |line|
         return $1
       end
       nil
@@ -424,6 +424,7 @@ module MswinBuild
       FileUtils.mkdir_p(logdir)
       logfile = File.join(logdir, @start_time.dup.utc.strftime('%Y%m%dT%H%M%SZ.log.html'))
       warns = 0
+      revision = nil
       open(File.join(tmpdir, "gathered"), "w") do |out|
         files.each_with_index do |io, i|
           next unless io
@@ -433,6 +434,9 @@ module MswinBuild
               line = h(line) unless /^<a / =~ line
               out.write line
               warns += line.scan(/warn/i).length
+              if File.basename(io.path) == "checkout" && /^(?:SVN )?Revision: (\d+)$/ =~ line
+                revision = $1
+              end
             end
           ensure
             io.close
@@ -441,6 +445,7 @@ module MswinBuild
         end
       end
       @title.insert(2, "#{warns}W") if warns > 0
+      @title.unshift("r#{revision}") if revision
       open(logfile, "w") do |out|
         header(out)
         out.puts "    <ul>"

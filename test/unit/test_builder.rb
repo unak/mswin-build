@@ -103,8 +103,13 @@ env:
       ProcessMock.set_callback do |args|
         assert_not_empty commands, "for ``#{args[0]}''"
         assert_match commands.shift, args[0]
-        if /^svn checkout\b/ =~ args[0]
+        case args[0]
+        when /^svn checkout\b/
           Dir.mkdir("ruby")
+        when /^svn info\b/
+          if args[1].is_a?(Hash) && args[1][:out]
+            args[1][:out].puts "Revision: 12345"
+          end
         end
 
         StatusMock.new(0)
@@ -127,6 +132,9 @@ env:
     assert files.reject! {|e| /\.log\.html\.gz\z/ =~ e}
     assert files.reject! {|e| /\.diff\.html\.gz\z/ =~ e}
     assert_empty files
+
+    recent = File.read(File.join(@tmpdir, "recent.html"))
+    assert_match /^<a href="[^"]+" name="[^"]+">[^<]+<\/a> r12345 /, recent
   end
 
   def test_get_current_revision
