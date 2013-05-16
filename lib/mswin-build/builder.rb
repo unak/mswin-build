@@ -120,7 +120,7 @@ module MswinBuild
       orig_lang = ENV["LANG"]
       ENV["LANG"] = "C"
       begin
-        if /^(?:SVN )?Revision: (\d+)$/ =~ `#{@config['svn']} info #{@config['repository']}`
+        if /^(?:SVN )?Last Changed Rev: (\d+)$/ =~ `#{@config['svn']} info #{@config['repository']}`
           $1
         else
           nil
@@ -144,7 +144,7 @@ module MswinBuild
       end
       return nil unless file
 
-      `#{@config['gzip']} -d -c #{File.join(@config['logdir'], 'log', file)}`.scan(/^(?:SVN )?Revision: (\d+)$/) do |line|
+      `#{@config['gzip']} -d -c #{File.join(@config['logdir'], 'log', file)}`.scan(/^(?:SVN )?Last Changed Rev: (\d+)$/) do |line|
         return $1
       end
       nil
@@ -434,7 +434,7 @@ module MswinBuild
               line = h(line) unless /^<a / =~ line
               out.write line
               warns += line.scan(/warn/i).length
-              if File.basename(io.path) == "checkout" && /^(?:SVN )?Revision: (\d+)$/ =~ line
+              if File.basename(io.path) == "checkout" && /^(?:SVN )?Last Changed Rev: (\d+)$/ =~ line
                 revision = $1
               end
             end

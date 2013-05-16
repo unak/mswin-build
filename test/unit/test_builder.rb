@@ -108,7 +108,8 @@ env:
           Dir.mkdir("ruby")
         when /^svn info\b/
           if args[1].is_a?(Hash) && args[1][:out]
-            args[1][:out].puts "Revision: 12345"
+            args[1][:out].puts "Revision: 54321"
+            args[1][:out].puts "Last Changed Rev: 12345"
           end
         end
 
@@ -141,7 +142,7 @@ env:
     TOPLEVEL_BINDING.eval <<-EOS
       alias orig_backquote ` #`
       def `(cmd) #`
-        "Revision: 12345\n"
+        "Revision: 54321\nLast Changed Rev: 12345\n"
       end
     EOS
 
