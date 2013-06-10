@@ -135,6 +135,82 @@ env:
     assert_empty files
 
     recent = File.read(File.join(@tmpdir, "recent.html"))
+    assert_match /\bsuccess\b/, recent
+    assert_match /^<a href="[^"]+" name="[^"]+">[^<]+<\/a> r12345 /, recent
+  end
+
+  def test_run_timeout
+    builder = MswinBuild::Builder.new(target: "dummy", settings: @yaml.path)
+    config = builder.instance_variable_get(:@config)
+    config["timeout"]["test-all"] = 0.1
+    builder.instance_variable_set(:@config, config)
+    begin
+      origProcess = Process
+      Object.class_eval do
+        remove_const :Process
+        const_set :Process, ProcessMock
+      end
+
+      commands = [
+        /^bison --version$/,
+        /^svn checkout dummy_repository ruby$/,
+        /^svn info$/,
+        /^win32\/configure\.bat --prefix=[^ ]+ --with-baseruby=ruby$/,
+        /^cl$/,
+        /^nmake -l miniruby$/,
+        /^\.\/miniruby -v$/,
+        /^nmake -l "OPTS=-v -q" btest$/,
+        /^\.\/miniruby sample\/test\.rb/,
+        /^nmake -l showflags$/,
+        /^nmake -l main$/,
+        /^nmake -l docs$/,
+        /^\.\/ruby -v$/,
+        /^nmake -l install-nodoc$/,
+        /^nmake -l install-doc$/,
+        /^nmake -l "OPTS=-v -q" test-knownbug$/,
+        /^nmake -l TESTS=-v RUBYOPT=-w test-all$/,
+      ]
+
+      ProcessMock.set_callback do |args|
+        assert_not_empty commands, "for ``#{args[0]}''"
+        assert_match commands.shift, args[0]
+        case args[0]
+        when /^svn checkout\b/
+          Dir.mkdir("ruby")
+        when /^svn info\b/
+          if args[1].is_a?(Hash) && args[1][:out]
+            args[1][:out].puts "Revision: 54321"
+            args[1][:out].puts "Last Changed Rev: 12345"
+          end
+        when /test-all/
+          StatusMock.new(nil)
+          sleep 2
+          break
+        end
+
+        StatusMock.new(0)
+      end
+
+      builder.run
+
+      assert_empty commands
+    ensure
+      Object.class_eval do
+        remove_const :Process
+        const_set :Process, origProcess
+      end
+    end
+
+    assert File.exist?(File.join(@tmpdir, "recent.html"))
+    assert File.exist?(File.join(@tmpdir, "summary.html"))
+    assert File.directory?(File.join(@tmpdir, "log"))
+    files = Dir.glob(File.join(@tmpdir, "log", "*"))
+    assert files.reject! {|e| /\.log\.html\.gz\z/ =~ e}
+    assert files.reject! {|e| /\.diff\.html\.gz\z/ =~ e}
+    assert_empty files
+
+    recent = File.read(File.join(@tmpdir, "recent.html"))
+    assert_match /\bfailed\(test-all CommandTimeout\)/, recent
     assert_match /^<a href="[^"]+" name="[^"]+">[^<]+<\/a> r12345 /, recent
   end
 

@@ -359,7 +359,7 @@ module MswinBuild
     end
 
     define_buildmethod(:test_all) do |io, tmpdir|
-      ret = do_command(io, "test-all", "nmake -l TESTS=-v RUBYOPT=-w test-all", true, false, nil)
+      ret = do_command(io, "test-all", "nmake -l TESTS=-v RUBYOPT=-w test-all", true, true, nil)
       if !ret && !ret.nil?
         io.rewind
         if %r'^\d+ tests, \d+ assertions, (\d+) failures, (\d+) errors, (\d+) skips' =~ io.read
