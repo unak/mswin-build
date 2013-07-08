@@ -214,18 +214,18 @@ module MswinBuild
         end
 
         if status.nil? || !status.success?
-          io.puts "exit #{status.to_i / 256}" unless status.nil?
+          io.puts "exit #{status.to_i}" unless status.nil?
           io.puts "failed(#{name})"
           @title << "failed(#{name})" if check_retval || status.nil?
           @links[name] << "failed"
-          puts %'failed(#{name}) #{status.nil? ? "because maybe command not found" : "with status #{status.to_i / 256}"}' if $debug
+          puts %'failed(#{name}) #{status.nil? ? "because maybe command not found" : "with status #{status.to_i}"}' if $debug
         end
       rescue Timeout::Error
         io.puts
         io.printf "|output interval exceeds %.1f seconds. (CommandTimeout)", @config["timeout"][name] || @config["timeout"]["default"]
         io.puts $!.backtrace.join("\n| ")
         io.puts "failed(#{name} CommandTimeout)"
-        @title << "failed(#{name} CommandTimeout)" if check_retval
+        @title << "failed(#{name} CommandTimeout)"
         @links[name] << "failed"
         puts "failed(#{name} CommandTimeout)" if $debug
       ensure
@@ -305,7 +305,7 @@ module MswinBuild
       ret = do_command(io, "btest", 'nmake -l "OPTS=-v -q" btest', true, false)
       if !ret && !ret.nil?
         io.rewind
-        if %r'^FAIL (\d+)/' =~ io.read
+        if %r'^FAIL (\d+)/\d+' =~ io.read
           @title << "#{$1}BFail"
         else
           @title << "failed(btest)"
@@ -359,7 +359,7 @@ module MswinBuild
     end
 
     define_buildmethod(:test_all) do |io, tmpdir|
-      ret = do_command(io, "test-all", "nmake -l TESTS=-v RUBYOPT=-w test-all", true, true, nil)
+      ret = do_command(io, "test-all", "nmake -l TESTS=-v RUBYOPT=-w test-all", true, false, nil)
       if !ret && !ret.nil?
         io.rewind
         if %r'^\d+ tests, \d+ assertions, (\d+) failures, (\d+) errors, (\d+) skips' =~ io.read

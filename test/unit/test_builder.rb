@@ -8,7 +8,7 @@ module ProcessMock
   @callback = nil
 
   def self.spawn(*args)
-    @status = @callback.call(args)
+    @status = @callback.call(args, @param)
     @status.pid
   end
 
@@ -16,7 +16,8 @@ module ProcessMock
     [pid, @status]
   end
 
-  def self.set_callback(&blk)
+  def self.set_callback(param = nil, &blk)
+    @param = param
     @callback = blk
   end
 end
@@ -55,7 +56,62 @@ env:
     FileUtils.rm_r(@tmpdir)
   end
 
-  def test_run
+  def run_builder(hash = {}, &blk)
+    builder = MswinBuild::Builder.new(target: "dummy", settings: @yaml.path)
+    if !hash.empty?
+      config = builder.instance_variable_get(:@config)
+      config["timeout"]["test-all"] = hash[:timeout] if hash[:timeout]
+      builder.instance_variable_set(:@config, config)
+    end
+    begin
+      origProcess = Process
+      Object.class_eval do
+        remove_const :Process
+        const_set :Process, ProcessMock
+      end
+
+      commands = [
+        /^bison --version$/,
+        /^svn checkout dummy_repository ruby$/,
+        /^svn info$/,
+        /^win32\/configure\.bat --prefix=[^ ]+ --with-baseruby=ruby$/,
+        /^cl$/,
+        /^nmake -l miniruby$/,
+        /^\.\/miniruby -v$/,
+        /^nmake -l "OPTS=-v -q" btest$/,
+        /^\.\/miniruby sample\/test\.rb/,
+        /^nmake -l showflags$/,
+        /^nmake -l main$/,
+        /^nmake -l docs$/,
+        /^\.\/ruby -v$/,
+        /^nmake -l install-nodoc$/,
+        /^nmake -l install-doc$/,
+        /^nmake -l "OPTS=-v -q" test-knownbug$/,
+        /^nmake -l TESTS=-v RUBYOPT=-w test-all$/,
+      ]
+
+      ProcessMock.set_callback(commands, &blk)
+
+      builder.run
+
+      assert_empty commands
+    ensure
+      Object.class_eval do
+        remove_const :Process
+        const_set :Process, origProcess
+      end
+    end
+
+    assert File.exist?(File.join(@tmpdir, "recent.html"))
+    assert File.exist?(File.join(@tmpdir, "summary.html"))
+    assert File.directory?(File.join(@tmpdir, "log"))
+    files = Dir.glob(File.join(@tmpdir, "log", "*"))
+    assert files.reject! {|e| /\.log\.html\.gz\z/ =~ e}
+    assert files.reject! {|e| /\.diff\.html\.gz\z/ =~ e}
+    assert_empty files
+  end
+
+  def test_run_success
     assert_raise(ArgumentError) do
       MswinBuild::Builder.new
     end
@@ -72,146 +128,115 @@ env:
       MswinBuild::Builder.new(target: "dummy", settings: @yaml.path, foo: nil)
     end
 
-    builder = MswinBuild::Builder.new(target: "dummy", settings: @yaml.path)
-    begin
-      origProcess = Process
-      Object.class_eval do
-        remove_const :Process
-        const_set :Process, ProcessMock
-      end
+    run_builder do |args, commands|
+      assert_not_empty commands, "for ``#{args[0]}''"
+      assert_match commands.shift, args[0]
 
-      commands = [
-        /^bison --version$/,
-        /^svn checkout dummy_repository ruby$/,
-        /^svn info$/,
-        /^win32\/configure\.bat --prefix=[^ ]+ --with-baseruby=ruby$/,
-        /^cl$/,
-        /^nmake -l miniruby$/,
-        /^\.\/miniruby -v$/,
-        /^nmake -l "OPTS=-v -q" btest$/,
-        /^\.\/miniruby sample\/test\.rb/,
-        /^nmake -l showflags$/,
-        /^nmake -l main$/,
-        /^nmake -l docs$/,
-        /^\.\/ruby -v$/,
-        /^nmake -l install-nodoc$/,
-        /^nmake -l install-doc$/,
-        /^nmake -l "OPTS=-v -q" test-knownbug$/,
-        /^nmake -l TESTS=-v RUBYOPT=-w test-all$/,
-      ]
-
-      ProcessMock.set_callback do |args|
-        assert_not_empty commands, "for ``#{args[0]}''"
-        assert_match commands.shift, args[0]
-        case args[0]
-        when /^svn checkout\b/
-          Dir.mkdir("ruby")
-        when /^svn info\b/
-          if args[1].is_a?(Hash) && args[1][:out]
-            args[1][:out].puts "Revision: 54321"
-            args[1][:out].puts "Last Changed Rev: 12345"
-          end
+      case args[0]
+      when /^svn checkout\b/
+        Dir.mkdir("ruby")
+      when /^svn info\b/
+        if args[1].is_a?(Hash) && args[1][:out]
+          args[1][:out].puts "Revision: 54321"
+          args[1][:out].puts "Last Changed Rev: 12345"
         end
-
-        StatusMock.new(0)
       end
 
-      builder.run
-
-      assert_empty commands
-    ensure
-      Object.class_eval do
-        remove_const :Process
-        const_set :Process, origProcess
-      end
+      StatusMock.new(0)
     end
-
-    assert File.exist?(File.join(@tmpdir, "recent.html"))
-    assert File.exist?(File.join(@tmpdir, "summary.html"))
-    assert File.directory?(File.join(@tmpdir, "log"))
-    files = Dir.glob(File.join(@tmpdir, "log", "*"))
-    assert files.reject! {|e| /\.log\.html\.gz\z/ =~ e}
-    assert files.reject! {|e| /\.diff\.html\.gz\z/ =~ e}
-    assert_empty files
 
     recent = File.read(File.join(@tmpdir, "recent.html"))
     assert_match /\bsuccess\b/, recent
     assert_match /^<a href="[^"]+" name="[^"]+">[^<]+<\/a> r12345 /, recent
   end
 
-  def test_run_timeout
-    builder = MswinBuild::Builder.new(target: "dummy", settings: @yaml.path)
-    config = builder.instance_variable_get(:@config)
-    config["timeout"]["test-all"] = 0.1
-    builder.instance_variable_set(:@config, config)
-    begin
-      origProcess = Process
-      Object.class_eval do
-        remove_const :Process
-        const_set :Process, ProcessMock
-      end
+  def test_run_btest_failure
+    run_builder do |args, commands|
+      commands.shift
 
-      commands = [
-        /^bison --version$/,
-        /^svn checkout dummy_repository ruby$/,
-        /^svn info$/,
-        /^win32\/configure\.bat --prefix=[^ ]+ --with-baseruby=ruby$/,
-        /^cl$/,
-        /^nmake -l miniruby$/,
-        /^\.\/miniruby -v$/,
-        /^nmake -l "OPTS=-v -q" btest$/,
-        /^\.\/miniruby sample\/test\.rb/,
-        /^nmake -l showflags$/,
-        /^nmake -l main$/,
-        /^nmake -l docs$/,
-        /^\.\/ruby -v$/,
-        /^nmake -l install-nodoc$/,
-        /^nmake -l install-doc$/,
-        /^nmake -l "OPTS=-v -q" test-knownbug$/,
-        /^nmake -l TESTS=-v RUBYOPT=-w test-all$/,
-      ]
-
-      ProcessMock.set_callback do |args|
-        assert_not_empty commands, "for ``#{args[0]}''"
-        assert_match commands.shift, args[0]
-        case args[0]
-        when /^svn checkout\b/
-          Dir.mkdir("ruby")
-        when /^svn info\b/
-          if args[1].is_a?(Hash) && args[1][:out]
-            args[1][:out].puts "Revision: 54321"
-            args[1][:out].puts "Last Changed Rev: 12345"
-          end
-        when /test-all/
-          StatusMock.new(nil)
-          sleep 2
-          break
+      status = 0
+      case args[0]
+      when /^svn checkout\b/
+        Dir.mkdir("ruby")
+      when /\bbtest\b/
+        if args[1].is_a?(Hash) && args[1][:out]
+          args[1][:out].puts "FAIL 3/456"
         end
-
-        StatusMock.new(0)
+        status = 3
       end
 
-      builder.run
-
-      assert_empty commands
-    ensure
-      Object.class_eval do
-        remove_const :Process
-        const_set :Process, origProcess
-      end
+      StatusMock.new(status)
     end
 
-    assert File.exist?(File.join(@tmpdir, "recent.html"))
-    assert File.exist?(File.join(@tmpdir, "summary.html"))
-    assert File.directory?(File.join(@tmpdir, "log"))
-    files = Dir.glob(File.join(@tmpdir, "log", "*"))
-    assert files.reject! {|e| /\.log\.html\.gz\z/ =~ e}
-    assert files.reject! {|e| /\.diff\.html\.gz\z/ =~ e}
-    assert_empty files
+    recent = File.read(File.join(@tmpdir, "recent.html"))
+    assert_match /\b3BFail\b/, recent
+    assert_not_match /\bfailed\b/, recent
+  end
+
+  def test_run_testrb_failure
+    run_builder do |args, commands|
+      commands.shift
+
+      status = 0
+      case args[0]
+      when /^svn checkout\b/
+        Dir.mkdir("ruby")
+      when /\btest\.rb\b/
+        if args[1].is_a?(Hash) && args[1][:out]
+          args[1][:out].puts "not ok/test: 123 failed 4"
+        end
+        status = 3
+      end
+
+      StatusMock.new(status)
+    end
+
+    recent = File.read(File.join(@tmpdir, "recent.html"))
+    assert_match /\b4NotOK\b/, recent
+    assert_not_match /\bfailed\b/, recent
+  end
+
+  def test_run_test_all_failure
+    run_builder do |args, commands|
+      commands.shift
+
+      status = 0
+      case args[0]
+      when /^svn checkout\b/
+        Dir.mkdir("ruby")
+      when /\btest-all\b/
+        if args[1].is_a?(Hash) && args[1][:out]
+          args[1][:out].puts "123 tests, 4567 assertions, 2 failures, 1 errors, 4 skips"
+        end
+        status = 3
+      end
+
+      StatusMock.new(status)
+    end
+
+    recent = File.read(File.join(@tmpdir, "recent.html"))
+    assert_match /\b2F1E\b/, recent
+    assert_not_match /\bfailed\b/, recent
+  end
+
+  def test_run_timeout
+    run_builder(timeout: 0.1) do |args, commands|
+      commands.shift
+
+      case args[0]
+      when /^svn checkout\b/
+        Dir.mkdir("ruby")
+      when /\btest-all\b/
+        StatusMock.new(nil)
+        sleep 2
+        break
+      end
+
+      StatusMock.new(0)
+    end
 
     recent = File.read(File.join(@tmpdir, "recent.html"))
     assert_match /\bfailed\(test-all CommandTimeout\)/, recent
-    assert_match /^<a href="[^"]+" name="[^"]+">[^<]+<\/a> r12345 /, recent
   end
 
   def test_get_current_revision
