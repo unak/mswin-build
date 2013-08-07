@@ -90,7 +90,9 @@ env:
         /^nmake -l TESTS=-v RUBYOPT=-w test-all$/,
       ]
 
-      ProcessMock.set_callback(commands, &blk)
+      ProcessMock.set_callback(blk) do |blk|
+        blk.call(commands)
+      end
 
       builder.run
 
