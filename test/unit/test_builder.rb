@@ -95,6 +95,7 @@ env:
       builder.run
 
       assert_empty commands
+      assert_equal hash[:revision].to_s, builder.get_last_revision if hash[:revision]
     ensure
       Object.class_eval do
         remove_const :Process
@@ -128,7 +129,7 @@ env:
       MswinBuild::Builder.new(target: "dummy", settings: @yaml.path, foo: nil)
     end
 
-    run_builder do |args, commands|
+    run_builder(revision: 12345) do |args, commands|
       assert_not_empty commands, "for ``#{args[0]}''"
       assert_match commands.shift, args[0]
 

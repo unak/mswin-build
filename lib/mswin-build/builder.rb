@@ -137,7 +137,7 @@ module MswinBuild
       return nil unless File.exist?(recent)
       file = nil
       open(recent, "r") do |f|
-        f.read.scan(/^(<a href="(.+?)".*?<br>)$/) do |line|
+        f.read.scan(/^<a href="(.+?)".*?<br>$/) do |line|
           file = File.basename($1)
           break
         end
