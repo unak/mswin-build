@@ -7,7 +7,7 @@ require "mswin-build/builder"
 
 # use this running ruby as BASERUBY by default
 baseruby = File.join(RbConfig::CONFIG["bindir"], RbConfig::CONFIG["ruby_install_name"] + RbConfig::CONFIG["EXEEXT"])
-interval = 30
+interval = 60
 force_build = 24 * 60 * 60  # force build at least once in every day
 
 opt = OptionParser.new
@@ -40,7 +40,8 @@ loop do
       puts "+++ #{Time.now}  Start #{target} +++" if $debug
       system(*cmd)
       puts "--- #{Time.now}  Finish #{target} ---" if $debug
-      sleep interval
     end
   end
+  puts "=== #{Time.now}  Pausing #{interval} seconds ===" if debug
+  sleep interval
 end
