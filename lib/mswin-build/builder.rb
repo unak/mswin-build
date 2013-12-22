@@ -142,17 +142,28 @@ module MswinBuild
       file = nil
       open(recent, "r") do |f|
         f.read.scan(/^<a href="(.+?)".*?<br>$/) do |line|
-          file = File.basename($1)
+          file = $1
           break
         end
       end
       return nil unless file
 
-      cmd = "#{@config['gzip']} -d -c #{File.join(@config['logdir'], 'log', file)}"
+      cmd = "#{@config['gzip']} -d -c #{File.join(@config['logdir'], file)}"
       `#{cmd}`.scan(/^(?:SVN )?Last Changed Rev: (\d+)$/) do |line|
         return $1
       end
       nil
+    end
+
+    def get_last_build_time
+      recent = File.join(@config["logdir"], "recent.html")
+      return nil unless File.exist?(recent)
+      open(recent, "r") do |f|
+        f.read.scan(/^<a href="(.+?)".*?<br>$/) do |line|
+          return Time.parse(File.basename($1, ".log.html"))
+        end
+      end
+      return nil
     end
 
     private
