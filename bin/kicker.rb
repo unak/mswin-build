@@ -40,8 +40,10 @@ loop do
       puts "+++ #{Time.now}  Start #{target} +++" if $debug
       system(*cmd)
       puts "--- #{Time.now}  Finish #{target} ---" if $debug
+    else
+      puts "=== #{Time.now}  Skipped #{target} ===" if $debug
     end
   end
-  puts "=== #{Time.now}  Pausing #{interval} seconds ===" if debug
+  puts "=== #{Time.now}  Pausing #{interval} seconds ===" if $debug
   sleep interval
 end
