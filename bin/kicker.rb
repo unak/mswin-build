@@ -35,7 +35,8 @@ loop do
   ARGV.each do |target|
     builder = MswinBuild::Builder.new(target: target, baseruby: baseruby, settings: File.expand_path("../config/#{target}.yaml", File.dirname(__FILE__)))
     if !builder.get_last_build_time || builder.get_last_build_time + force_build < Time.now || builder.get_last_revision != builder.get_current_revision
-      cmd = ["echo", baseruby, File.expand_path("build.rb", File.dirname(__FILE__)), target]
+      cmd = [baseruby, File.expand_path("build.rb", File.dirname(__FILE__)), target]
+      cmd[-1, 0] = "-v" if $debug
       puts "+++ #{Time.now}  Start #{target} +++" if $debug
       system(*cmd)
       puts "--- #{Time.now}  Finish #{target} ---" if $debug
