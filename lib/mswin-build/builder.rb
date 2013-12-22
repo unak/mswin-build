@@ -51,6 +51,8 @@ module MswinBuild
       @config["timeout"]["install-doc"] ||= @config["timeout"]["default"]
       @config["timeout"]["test-knownbug"] ||= @config["timeout"]["default"]
       @config["timeout"]["test-all"] ||= @config["timeout"]["default_long"]
+
+      @last_status = nil
     end
 
     def run
@@ -72,23 +74,25 @@ module MswinBuild
         Dir.mktmpdir("mswin-build", @config["tmpdir"]) do |tmpdir|
           files << baseinfo(tmpdir)
           files << checkout(tmpdir)
-          files << configure(tmpdir)
-          files << cc_version(tmpdir)
-          files << miniruby(tmpdir)
-          files << miniversion(tmpdir)
-          files << btest(tmpdir)
-          files << testrb(tmpdir)
-          #files << method_list(tmpdir)
-          files << showflags(tmpdir)
-          files << main(tmpdir)
-          files << docs(tmpdir)
-          files << version(tmpdir)
-          files << install_nodoc(tmpdir)
-          files << install_doc(tmpdir)
-          #files << version_list(tmpdir)
-          files << test_knownbug(tmpdir)
-          files << test_all(tmpdir)
-          files << rubyspec(tmpdir)
+          if @last_status && @last_status.success?
+            files << configure(tmpdir)
+            files << cc_version(tmpdir)
+            files << miniruby(tmpdir)
+            files << miniversion(tmpdir)
+            files << btest(tmpdir)
+            files << testrb(tmpdir)
+            #files << method_list(tmpdir)
+            files << showflags(tmpdir)
+            files << main(tmpdir)
+            files << docs(tmpdir)
+            files << version(tmpdir)
+            files << install_nodoc(tmpdir)
+            files << install_doc(tmpdir)
+            #files << version_list(tmpdir)
+            files << test_knownbug(tmpdir)
+            files << test_all(tmpdir)
+            files << rubyspec(tmpdir)
+          end
           files << end_(tmpdir)
           logfile = gather_log(files, tmpdir)
           difffile = diff(tmpdir, logfile)
@@ -144,7 +148,8 @@ module MswinBuild
       end
       return nil unless file
 
-      `#{@config['gzip']} -d -c #{File.join(@config['logdir'], 'log', file)}`.scan(/^(?:SVN )?Last Changed Rev: (\d+)$/) do |line|
+      cmd = "#{@config['gzip']} -d -c #{File.join(@config['logdir'], 'log', file)}"
+      `#{cmd}`.scan(/^(?:SVN )?Last Changed Rev: (\d+)$/) do |line|
         return $1
       end
       nil
@@ -240,6 +245,7 @@ module MswinBuild
       ensure
         ENV["LANG"] = orig_lang if lang
       end
+      @last_status = status
       status.nil? ? nil : status.success?
     end
 
