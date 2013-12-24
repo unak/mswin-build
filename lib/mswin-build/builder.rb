@@ -82,7 +82,7 @@ module MswinBuild
             files << btest(tmpdir)
             files << testrb(tmpdir)
             #files << method_list(tmpdir)
-            files << showflags(tmpdir)
+            files << showflags(tmpdir) if ruby_version >= "1.9.3"
             files << main(tmpdir)
             files << docs(tmpdir)
             files << version(tmpdir)
@@ -315,7 +315,7 @@ module MswinBuild
     end
 
     define_buildmethod(:configure) do |io, tmpdir|
-      options = " --with-baseruby=#{@config['baseruby'].gsub(%r(/), '\\')}" unless oldruby
+      options = " --with-baseruby=#{@config['baseruby'].gsub(%r(/), '\\')}" if ruby_version >= "1.9.0"
       do_command(io, "configure", "win32/configure.bat --prefix=#{destdir(tmpdir)}#{options}", true)
     end
 
@@ -377,12 +377,12 @@ module MswinBuild
     end
 
     define_buildmethod(:install_nodoc) do |io, tmpdir|
-      options = " DESTDIR=#{destdir(tmpdir)}" if oldruby
+      options = " DESTDIR=#{destdir(tmpdir)}" if ruby_version < "1.9.0"
       do_command(io, "install-nodoc", "nmake -l install-nodoc#{options}", true)
     end
 
     define_buildmethod(:install_doc) do |io, tmpdir|
-      options = " DESTDIR=#{destdir(tmpdir)}" if oldruby
+      options = " DESTDIR=#{destdir(tmpdir)}" if ruby_version < "1.9.0"
       do_command(io, "install-doc", "nmake -l install-doc#{options}", true)
     end
 
@@ -423,8 +423,12 @@ module MswinBuild
       File.join(tmpdir, 'install')
     end
 
-    def oldruby
-      /_1_[0-8](?:_\d+)?$/ =~ @config["repository"]
+    def ruby_version
+      if /_(\d)_(\d)(?:_(\d+))?$/ =~ @config["repository"]
+        return "#{$1}.#{$2}.#{$3 || 9}"
+      else
+        return "9.9.9"  # means unknown (maybe trunk)
+      end
     end
 
     def header(io)
