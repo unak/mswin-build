@@ -315,7 +315,8 @@ module MswinBuild
     end
 
     define_buildmethod(:configure) do |io, tmpdir|
-      do_command(io, "configure", "win32/configure.bat --prefix=#{File.join(tmpdir, 'install')} --with-baseruby=#{@config['baseruby'].gsub(%r(/), '\\')}", true)
+      options = " --with-baseruby=#{@config['baseruby'].gsub(%r(/), '\\')}" unless oldruby
+      do_command(io, "configure", "win32/configure.bat --prefix=#{destdir(tmpdir)}#{options}", true)
     end
 
     define_buildmethod(:cc_version) do |io, tmpdir|
@@ -376,11 +377,13 @@ module MswinBuild
     end
 
     define_buildmethod(:install_nodoc) do |io, tmpdir|
-      do_command(io, "install-nodoc", "nmake -l install-nodoc", true)
+      options = " DESTDIR=#{destdir(tmpdir)}" if oldruby
+      do_command(io, "install-nodoc", "nmake -l install-nodoc#{options}", true)
     end
 
     define_buildmethod(:install_doc) do |io, tmpdir|
-      do_command(io, "install-doc", "nmake -l install-doc", true)
+      options = " DESTDIR=#{destdir(tmpdir)}" if oldruby
+      do_command(io, "install-doc", "nmake -l install-doc#{options}", true)
     end
 
     define_buildmethod(:test_knownbug) do |io, tmpdir|
@@ -414,6 +417,14 @@ module MswinBuild
       heading(io, "end")
       diff = Time.now - @start_time
       io.printf "elapsed %.1fs = %dm %04.1fs\n", diff, diff / 60, diff % 60
+    end
+
+    def destdir(tmpdir)
+      File.join(tmpdir, 'install')
+    end
+
+    def oldruby
+      /_1_[0-8](?:_\d+)?$/ =~ @config["repository"]
     end
 
     def header(io)
