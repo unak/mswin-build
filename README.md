@@ -1,3 +1,6 @@
+[![Build Status](https://img.shields.io/travis/unak/mswin-build.svg)](https://travis-ci.org/unak/mswin-build)
+[![Version     ](https://img.shields.io/gem/v/mswin-build.svg)](https://rubygems.org/gems/mswin-build)
+
 mswin-build
 ===========
 
