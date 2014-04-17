@@ -1,6 +1,7 @@
 #! ruby
 # expected ruby 1.9.x or later.
-$LOAD_PATH.unshift(File.expand_path("../lib", File.dirname(__FILE__)))
+libdir = File.expand_path("../lib", File.dirname(__FILE__))
+$LOAD_PATH.unshift(libdir) if File.directory?(libdir)
 require "optparse"
 require "rbconfig"
 require "mswin-build/builder"

@@ -23,4 +23,4 @@ all:
     assert_nil Process.waitpid(pid, Process::WNOHANG)
     assert_equal 3, MswinBuild::ProcessTree.terminate_process_tree(pid)
   end
-end
+end if /mswin|mingw/ =~ RUBY_PLATFORM
