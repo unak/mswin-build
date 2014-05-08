@@ -9,6 +9,7 @@ require "mswin-build/builder"
 baseruby = File.join(RbConfig::CONFIG["bindir"], RbConfig::CONFIG["ruby_install_name"] + RbConfig::CONFIG["EXEEXT"])
 interval = 60
 force_build = 24 * 60 * 60  # force build at least once in every day
+cmd_dir = ENV['TEMP']
 
 opt = OptionParser.new
 opt.banner = "Usage: ruby #$0 [options] <target name>"
@@ -20,6 +21,7 @@ opt.on('-v', '--verbose', "Be verbose. default = #{!$debug.nil? && $debug}") { $
 opt.on('-b <baseruby>', '--baseruby=<baserbuby>', "specify baseruby. default: #{baseruby}") { |v| baseruby = v }
 opt.on('-i <seconds>', '--interval=<seconds>', "interval between each build. default: #{interval}") { |v| interval = Integer(v) }
 opt.on('-f <seconds>', '--force-build=<seconds>', "force build after specified seconds from last bulid. default: #{force_build}") { |v| fource_build = Integer(v) }
+opt.on('-t <directory>', '--command-dir=<directory>', "specify force-build command directory. default: ENV['TEMP'] (#{ENV['TEMP']})") { |v| cmd_dir = v }
 
 begin
   opt.parse!(ARGV)
@@ -34,7 +36,13 @@ end
 loop do
   ARGV.each do |target|
     builder = MswinBuild::Builder.new(target: target, baseruby: baseruby, settings: File.expand_path("../config/#{target}.yaml", File.dirname(__FILE__)))
-    if !builder.get_last_build_time || builder.get_last_build_time + force_build < Time.now || builder.get_last_revision != builder.get_current_revision
+    if File.exist?(File.join(cmd_dir, target))
+      force = true
+      File.unlink(File.join(cmd_dir, target)) rescue nil
+    else
+      force = false
+    end
+    if force || !builder.get_last_build_time || builder.get_last_build_time + force_build < Time.now || builder.get_last_revision != builder.get_current_revision
       cmd = [baseruby, File.expand_path("build.rb", File.dirname(__FILE__)), target]
       cmd << "-v" if $debug
       puts "+++ #{Time.now}  Start #{target} +++" if $debug
