@@ -316,6 +316,7 @@ module MswinBuild
 
     define_buildmethod(:configure) do |io, tmpdir|
       options = " --with-baseruby=#{@config['baseruby'].gsub(%r(/), '\\')}" if ruby_version >= "1.9.0"
+      options << " #{@config['configure_args']}"
       do_command(io, "configure", "win32/configure.bat --prefix=#{destdir(tmpdir)}#{options}", true)
     end
 
