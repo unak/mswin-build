@@ -76,7 +76,7 @@ module MswinBuild
           files << checkout(tmpdir)
           if @last_status && @last_status.success?
             files << configure(tmpdir)
-            files << after_update(tmpdir)
+            files << extract_extlibs(tmpdir)
             files << cc_version(tmpdir)
             files << miniruby(tmpdir)
             files << miniversion(tmpdir)
@@ -321,10 +321,10 @@ module MswinBuild
       do_command(io, "configure", "win32/configure.bat --prefix=#{destdir(tmpdir)}#{options}", true)
     end
 
-    define_buildmethod(:after_update) do |io, tmpdir|
+    define_buildmethod(:extract_extlibs) do |io, tmpdir|
       open('common.mk') do |f|
-        if /^after-update:/ =~ f.read
-          do_command(io, "affter-update", "nmake -l after-update", true)
+        if /^extract-extlibs:/ =~ f.read
+          do_command(io, "extract-extlibs", "nmake -l extract-extlibs", true)
         end
       end
     end
