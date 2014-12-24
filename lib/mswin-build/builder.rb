@@ -322,10 +322,13 @@ module MswinBuild
     end
 
     define_buildmethod(:extract_extlibs) do |io, tmpdir|
-      open('common.mk') do |f|
-        if /^extract-extlibs:/ =~ f.read
-          do_command(io, "extract-extlibs", "nmake -l extract-extlibs", true)
+      begin
+        open(File.join(@builddir, 'common.mk')) do |f|
+          if /^extract-extlibs:/ =~ f.read
+            do_command(io, "extract-extlibs", "nmake -l extract-extlibs", true)
+          end
         end
+      rescue Errno::ENOENT
       end
     end
 
