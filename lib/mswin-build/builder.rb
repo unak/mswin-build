@@ -76,6 +76,7 @@ module MswinBuild
           files << checkout(tmpdir)
           if @last_status && @last_status.success?
             files << configure(tmpdir)
+            files << after_update(tmpdir)
             files << cc_version(tmpdir)
             files << miniruby(tmpdir)
             files << miniversion(tmpdir)
@@ -318,6 +319,14 @@ module MswinBuild
       options = " --with-baseruby=#{@config['baseruby'].gsub(%r(/), '\\')}" if ruby_version >= "1.9.0"
       options << " #{@config['configure_args']}"
       do_command(io, "configure", "win32/configure.bat --prefix=#{destdir(tmpdir)}#{options}", true)
+    end
+
+    define_buildmethod(:after_update) do |io, tmpdir|
+      open('common.mk') do |f|
+        if /^after-update:/ =~ f.read
+          do_command(io, "affter-update", "nmake -l after-update", true)
+        end
+      end
     end
 
     define_buildmethod(:cc_version) do |io, tmpdir|
