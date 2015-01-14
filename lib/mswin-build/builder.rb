@@ -6,6 +6,7 @@ require "timeout"
 require "tmpdir"
 require "yaml"
 require "mswin-build/process_tree"
+require "mswin-build/upload"
 
 module MswinBuild
   class Builder
@@ -101,6 +102,8 @@ module MswinBuild
           gzip(difffile)
           add_recent(logfile)
           add_summary(logfile)
+
+          MswinBuild.run_upload_hooks
         end
         true
       rescue
