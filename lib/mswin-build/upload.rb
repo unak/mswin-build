@@ -131,7 +131,7 @@ module MswinBuild
     end
 
     open(filepath, 'rb') do |f|
-      puts "uploading '#{filepath}'..." if $debug
+      puts "uploading '#{filepath}' as '#{blobname}'..." if $debug
       service.create_block_blob(container, blobname, f, options)
     end
     true
