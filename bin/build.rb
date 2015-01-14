@@ -14,6 +14,7 @@ opt.separator "  This script automatically loads config/<target name>.yaml."
 opt.separator ""
 opt.separator "Options:"
 opt.on('-v', '--verbose', 'Be verbose.') { $debug = true }
+opt.on('-a KEY', '--azure-key=KEY', 'Upload results by KEY') {|v| $azure_key = v }
 
 begin
   opt.parse!(ARGV)
@@ -24,6 +25,12 @@ rescue RuntimeError => ex
   puts
   puts opt.help
   exit 1
+end
+
+if $azure_key
+  ENV['AZURE_STORAGE_ACCESS_KEY'] = $azure_key
+  name = /-/ =~ target ? target.split(/-/)[0..-2].join('-') : target
+  MswinBuild.register_azure_upload(name)
 end
 
 # use this running ruby as BASERUBY
