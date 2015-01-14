@@ -27,14 +27,15 @@ rescue RuntimeError => ex
   exit 1
 end
 
-if $azure_key
-  ENV['AZURE_STORAGE_ACCESS_KEY'] = $azure_key
-  name = /-/ =~ target ? target.split(/-/)[0..-2].join('-') : target
-  MswinBuild.register_azure_upload(name)
-end
-
 # use this running ruby as BASERUBY
 baseruby = File.join(RbConfig::CONFIG["bindir"], RbConfig::CONFIG["ruby_install_name"] + RbConfig::CONFIG["EXEEXT"])
 
-builder = MswinBuild::Builder.new(target: target, baseruby: baseruby, settings: File.expand_path("../config/#{target}.yaml", File.dirname(__FILE__)))
+options = {
+  target: target,
+  baseruby: baseruby,
+  settings: File.expand_path("../config/#{target}.yaml",
+  File.dirname(__FILE__))
+}
+options[:azure_key] = $azure_key if $azure_key
+builder = MswinBuild::Builder.new(options)
 exit builder.run

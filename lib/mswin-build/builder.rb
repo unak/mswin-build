@@ -14,6 +14,7 @@ module MswinBuild
       @target = h.delete(:target) || raise("target not specified")
       baseruby = h.delete(:baseruby)
       yaml = h.delete(:settings) || raise("settings not specified")
+      azure_key = h.delete(:azure_key)
       unless h.empty?
         raise "unknown option(s): #{h}"
       end
@@ -26,6 +27,12 @@ module MswinBuild
       raise "baseruby not specified" unless @config["baseruby"]
       raise "repository not specified" unless @config["repository"]
       raise "logdir not specfied" unless @config["logdir"]
+
+      @config["azure_key"] = azure_key if azure_key
+      if@config["azure_key"]
+        ENV['AZURE_STORAGE_ACCESS_KEY'] = @config["azure_key"]
+        MswinBuild.register_azure_upload(@config["logdir"])
+      end
 
       @title = []
       @links = {}
