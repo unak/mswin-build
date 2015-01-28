@@ -20,7 +20,7 @@ opt.separator "Options:"
 opt.on('-v', '--verbose', "Be verbose. default = #{!$debug.nil? && $debug}") { $debug = true }
 opt.on('-b <baseruby>', '--baseruby=<baserbuby>', "specify baseruby. default: #{baseruby}") { |v| baseruby = v }
 opt.on('-i <seconds>', '--interval=<seconds>', "interval between each build. default: #{interval}") { |v| interval = Integer(v) }
-opt.on('-f <seconds>', '--force-build=<seconds>', "force build after specified seconds from last bulid. default: #{force_build}") { |v| fource_build = Integer(v) }
+opt.on('-f <seconds>', '--force-build=<seconds>', "force build after specified seconds from last bulid. default: #{force_build}") { |v| force_build = Integer(v) }
 opt.on('-t <directory>', '--command-dir=<directory>', "specify force-build command directory. default: ENV['TEMP'] (#{ENV['TEMP']})") { |v| cmd_dir = v }
 
 begin
