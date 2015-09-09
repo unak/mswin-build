@@ -84,6 +84,8 @@ module MswinBuild
           files << checkout(tmpdir)
           if @last_status && @last_status.success?
             files << configure(tmpdir)
+            files << update_unicode(tmpdir)
+            files << update_gems(tmpdir)
             files << extract_extlibs(tmpdir)
             files << cc_version(tmpdir)
             files << miniruby(tmpdir)
@@ -329,6 +331,28 @@ module MswinBuild
       options = " --with-baseruby=#{@config['baseruby'].gsub(%r(/), '\\')}" if ruby_version >= "1.9.0"
       options << " #{@config['configure_args']}"
       do_command(io, "configure", "win32/configure.bat --prefix=#{destdir(tmpdir)}#{options}", true)
+    end
+
+    define_buildmethod(:update_unicode) do |io, tmpdir|
+      begin
+        open(File.join(@builddir, 'common.mk')) do |f|
+          if /^update-unicode:/ =~ f.read
+            do_command(io, "update-unicode", "nmake -l update-unicode", true)
+          end
+        end
+      rescue Errno::ENOENT
+      end
+    end
+
+    define_buildmethod(:update_gems) do |io, tmpdir|
+      begin
+        open(File.join(@builddir, 'common.mk')) do |f|
+          if /^update-gems:/ =~ f.read
+            do_command(io, "update-gems", "nmake -l update-gems", true)
+          end
+        end
+      rescue Errno::ENOENT
+      end
     end
 
     define_buildmethod(:extract_extlibs) do |io, tmpdir|
