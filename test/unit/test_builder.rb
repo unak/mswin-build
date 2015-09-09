@@ -80,7 +80,6 @@ env:
         /^\.\/miniruby -v\s*$/,
         /^nmake -l "OPTS=-v -q" btest\s*$/,
         /^\.\/miniruby sample\/test\.rb\b/,
-        /^nmake -l showflags\s*$/,
         /^nmake -l main\s*$/,
         /^nmake -l docs\s*$/,
         /^\.\/ruby -v\s*$/,
