@@ -93,7 +93,7 @@ module MswinBuild
             files << btest(tmpdir)
             files << testrb(tmpdir)
             #files << method_list(tmpdir)
-            files << showflags(tmpdir) if ruby_version >= "1.9.3"
+            files << showflags(tmpdir)
             files << main(tmpdir)
             files << docs(tmpdir)
             files << version(tmpdir)
@@ -403,7 +403,14 @@ module MswinBuild
     end
 
     define_buildmethod(:showflags) do |io, tmpdir|
-      do_command(io, "showflags", "nmake -l showflags", true)
+      begin
+        open(File.join(@builddir, 'common.mk')) do |f|
+          if /^showflags:/ =~ f.read
+            do_command(io, "showflags", "nmake -l showflags", true)
+          end
+        end
+      rescue Errno::ENOENT
+      end
     end
 
     define_buildmethod(:main) do |io, tmpdir|
