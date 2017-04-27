@@ -37,6 +37,24 @@ class StatusMock
 end
 
 class TestBuilder < Test::Unit::TestCase
+  def self.startup
+    TOPLEVEL_BINDING.eval <<-EOS
+      alias orig_backquote ` #`
+      def `(cmd) #`
+        "Revision: 54321\n" +
+        "URL: http://example.com/svn/ruby\n" +
+        "Last Changed Rev: 12345\n"
+      end
+    EOS
+  end
+
+  def self.shutdown
+    TOPLEVEL_BINDING.eval <<-EOS
+      undef ` #`
+      alias ` orig_backquote #`
+    EOS
+  end
+
   def setup
     @tmpdir = Dir.mktmpdir('TestBuilder')
     @yaml = Tempfile.open('TestBuilder', @tmpdir)
@@ -138,8 +156,7 @@ env:
         Dir.mkdir("ruby")
       when /^svn info\b/
         if args[1].is_a?(Hash) && args[1][:out]
-          args[1][:out].puts "Revision: 54321"
-          args[1][:out].puts "Last Changed Rev: 12345"
+          args[1][:out].puts `svn info`
         end
       end
 
@@ -154,6 +171,7 @@ env:
     recent = File.read(File.join(@tmpdir, "recent.ltsv"))
     assert_match(/\bresult:success\b/, recent)
     assert_match(/\bruby_rev:r12345\b/, recent)
+    assert_match(/"http\\x3A\/\/[^:]+":12345\b/, recent)
     assert_not_match(/\btitle:[^\t]*\bfailed\b/, recent)
   end
 
@@ -266,21 +284,7 @@ env:
   end
 
   def test_get_current_revision
-    TOPLEVEL_BINDING.eval <<-EOS
-      alias orig_backquote ` #`
-      def `(cmd) #`
-        "Revision: 54321\nLast Changed Rev: 12345\n"
-      end
-    EOS
-
-    begin
-      builder = MswinBuild::Builder.new(target: "dummy", settings: @yaml.path)
-      assert_equal "12345", builder.get_current_revision
-    ensure
-      TOPLEVEL_BINDING.eval <<-EOS
-        undef ` #`
-        alias ` orig_backquote #`
-      EOS
-    end
+    builder = MswinBuild::Builder.new(target: "dummy", settings: @yaml.path)
+    assert_equal "12345", builder.get_current_revision
   end
 end

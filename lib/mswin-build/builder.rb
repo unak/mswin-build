@@ -681,7 +681,7 @@ module MswinBuild
 
         latest = @data.map{|k, v|
           k = k.to_s
-          k = k.gsub(/:/, '\\x3a')
+          k = k.gsub(/:/, '\\x3A')
           v = v.gsub(/\t/, ' ')
           k = %'"#{k}"' if /\W/ =~ k
           "#{k}:#{v}"
