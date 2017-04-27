@@ -16,7 +16,7 @@ A low quality clone of https://github.com/akr/chkbuild for mswin.
 Requirements
 ------------
 
-* ruby 1.9.3 or 2.0.0 or newer, with fiddle
+* ruby 2.1 or later
 * sed
 * bison
 * svn
