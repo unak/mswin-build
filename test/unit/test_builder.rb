@@ -103,6 +103,7 @@ env:
     end
 
     assert File.exist?(File.join(@tmpdir, "recent.html"))
+    assert File.exist?(File.join(@tmpdir, "recent.ltsv"))
     assert File.exist?(File.join(@tmpdir, "summary.html"))
     assert File.directory?(File.join(@tmpdir, "log"))
     files = Dir.glob(File.join(@tmpdir, "log", "*"))
@@ -148,6 +149,12 @@ env:
     recent = File.read(File.join(@tmpdir, "recent.html"))
     assert_match(/\bsuccess\b/, recent)
     assert_match(/^<a href="[^"]+" name="[^"]+">[^<]+<\/a> r12345 /, recent)
+    assert_not_match(/\bfailed\b/, recent)
+
+    recent = File.read(File.join(@tmpdir, "recent.ltsv"))
+    assert_match(/\bresult:success\b/, recent)
+    assert_match(/\bruby_rev:r12345\b/, recent)
+    assert_not_match(/\btitle:[^\t]*\bfailed\b/, recent)
   end
 
   def test_run_btest_failure
@@ -171,6 +178,11 @@ env:
     recent = File.read(File.join(@tmpdir, "recent.html"))
     assert_match(/\b3BFail\b/, recent)
     assert_not_match(/\bfailed\b/, recent)
+
+    recent = File.read(File.join(@tmpdir, "recent.ltsv"))
+    assert_match(/\bresult:failure\b/, recent)
+    assert_match(/\btitle:[^\t]*\b3BFail\b/, recent)
+    assert_not_match(/\btitle:[^\t]*\bfailed\b/, recent)
   end
 
   def test_run_testrb_failure
@@ -194,6 +206,11 @@ env:
     recent = File.read(File.join(@tmpdir, "recent.html"))
     assert_match(/\b4NotOK\b/, recent)
     assert_not_match(/\bfailed\b/, recent)
+
+    recent = File.read(File.join(@tmpdir, "recent.ltsv"))
+    assert_match(/\bresult:failure\b/, recent)
+    assert_match(/\btitle:[^\t]*\b4NotOK\b/, recent)
+    assert_not_match(/\btitle:[^\t]*\bfailed\b/, recent)
   end
 
   def test_run_test_all_failure
@@ -217,6 +234,11 @@ env:
     recent = File.read(File.join(@tmpdir, "recent.html"))
     assert_match(/\b2F1E\b/, recent)
     assert_not_match(/\bfailed\b/, recent)
+
+    recent = File.read(File.join(@tmpdir, "recent.ltsv"))
+    assert_match(/\bresult:failure\b/, recent)
+    assert_match(/\btitle:[^\t]*\b2F1E\b/, recent)
+    assert_not_match(/\btitle:[^\t]*\bfailed\b/, recent)
   end
 
   def test_run_timeout
@@ -237,6 +259,10 @@ env:
 
     recent = File.read(File.join(@tmpdir, "recent.html"))
     assert_match(/\bfailed\(test-all CommandTimeout\)/, recent)
+
+    recent = File.read(File.join(@tmpdir, "recent.ltsv"))
+    assert_match(/\bresult:failure\b/, recent)
+    assert_match(/\btitle:[^\t]*\bfailed\(test-all CommandTimeout\)/, recent)
   end
 
   def test_get_current_revision

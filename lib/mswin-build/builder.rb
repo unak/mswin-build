@@ -34,8 +34,11 @@ module MswinBuild
         MswinBuild.register_azure_upload(@config["logdir"])
       end
 
+      @data = {}
       @title = []
       @links = {}
+
+      @diff = nil
 
       @config["timeout"] ||= {}
       @config["timeout"]["default"] ||= 10 * 60      # default 10 min
@@ -108,7 +111,9 @@ module MswinBuild
           logfile = gather_log(files, tmpdir)
           difffile = diff(tmpdir, logfile)
           logfile = gzip(logfile)
-          gzip(difffile)
+          @data[:compressed_loghtml_relpath] = File.join("log", File.basename(logfile))
+          difffile = gzip(difffile)
+          @data[:compressed_diffhtml_relpath] = File.join("log", File.basename(difffile))
           add_recent(logfile)
           add_summary(logfile)
 
@@ -137,7 +142,7 @@ module MswinBuild
       orig_lang = ENV["LANG"]
       ENV["LANG"] = "C"
       begin
-        if /^(?:SVN )?Last Changed Rev: (\d+)$/ =~ `#{@config['svn']} info #{@config['repository']}`
+        if /^(?:SVN )?Last Changed Rev: (\d+)$/ =~ `#{@config['svn']} info #{@config['repository']} 2> NUL`
           $1
         else
           nil
@@ -219,7 +224,7 @@ module MswinBuild
       end
     end
 
-    def do_command(io, name, command, in_builddir = false, check_retval = true, lang = "C")
+    def do_command(io, name, command, in_builddir = false, check_retval = true, lang = "C", &blk)
       heading(io, name)
       status = nil
       if lang
@@ -227,7 +232,7 @@ module MswinBuild
         ENV["LANG"] = lang
       end
       begin
-        if $debug
+        if $DEBUG
           puts "+ #{command}"
           $stdout.flush
         end
@@ -237,20 +242,23 @@ module MswinBuild
           if File.exist?(@builddir)
             Dir.chdir(@builddir) do
               status = spawn_with_timeout(name, command, io)
+              blk.call(status) if blk
             end
           else
             status = nil
           end
         else
           status = spawn_with_timeout(name, command, io)
+          blk.call(status) if blk
         end
 
         if status.nil? || !status.success?
           io.puts "exit #{status.to_i}" unless status.nil?
           io.puts "failed(#{name})"
           @title << "failed(#{name})" if check_retval || status.nil?
+          @data[:result] = "failure"
           @links[name] << "failed"
-          if $debug
+          if $DEBUG
             puts %'failed(#{name}) #{status.nil? ? "because maybe command not found" : "with status #{status.to_i}"}'
             $stdout.flush
           end
@@ -261,8 +269,9 @@ module MswinBuild
         io.puts $!.backtrace.join("\n| ")
         io.puts "failed(#{name} CommandTimeout)"
         @title << "failed(#{name} CommandTimeout)"
+        @data[:result] = "failure"
         @links[name] << "failed"
-        if $debug
+        if $DEBUG
           puts "failed(#{name} CommandTimeout)"
           $stdout.flush
         end
@@ -274,7 +283,7 @@ module MswinBuild
     end
 
     def heading(io, name)
-      if $debug
+      if $DEBUG
         puts "== #{name}"
         $stdout.flush
       end
@@ -299,10 +308,12 @@ module MswinBuild
 
     define_buildmethod(:baseinfo) do |io, tmpdir|
       @start_time = Time.now
+      @data[:start_time] = @start_time.dup.utc.strftime('%Y%m%dT%H%M%SZ')
       # target
       heading(io, @target)
       host = Socket.gethostname.split(/\./).first
       @title << "(#{host})"
+      @data[:host] = host
       io.puts "Nickname: #{host}"
       io.puts "#{`ver`.gsub(/\r?\n/, '')} #{ENV['OS']} #{ENV['ProgramW6432'] ? 'x64' : 'i386'}"
 
@@ -324,7 +335,11 @@ module MswinBuild
 
       # svn-info/ruby
       @builddir = File.join(tmpdir, "ruby")
-      do_command(io, "svn-info/ruby", "#{@config['svn']} info", true)
+      do_command(io, "svn-info/ruby", "#{@config['svn']} info", true) do |s|
+        if /^URL: (.*)$/ =~ `#{@config['svn']} info 2> NUL`
+          @data[:svn_url] = $1
+        end
+      end
     end
 
     define_buildmethod(:configure) do |io, tmpdir|
@@ -387,6 +402,7 @@ module MswinBuild
         else
           @title << "failed(btest)"
         end
+        @data[:result] = "failure"
       end
     end
 
@@ -399,6 +415,7 @@ module MswinBuild
         else
           @title << "failed(test.rb)"
         end
+        @data[:result] = "failure"
       end
     end
 
@@ -428,6 +445,7 @@ module MswinBuild
       else
         @title.unshift(@target)
       end
+      @data[:version] = @title.first
     end
 
     define_buildmethod(:install_nodoc) do |io, tmpdir|
@@ -450,8 +468,10 @@ module MswinBuild
         io.rewind
         if %r'^\d+ tests, \d+ assertions, (\d+) failures, (\d+) errors, (\d+) skips' =~ io.read
           @title << "#{$1}F#{$2}E"
+          @data[:result] = "failure" if $1.to_i + $2.to_i > 0
         else
           @title << "failed(test-all)"
+          @data[:result] = "failure"
         end
       end
     end
@@ -466,6 +486,7 @@ module MswinBuild
       unless /failed|BFail|NotOK|\d+F\d+E/ =~ @title.join
         heading(io, "success")
         @title << "success"
+        @data[:result] = "success"
       end
 
       heading(io, "end")
@@ -520,7 +541,7 @@ module MswinBuild
     def gather_log(files, tmpdir)
       logdir = File.join(@config["logdir"], "log")
       FileUtils.mkdir_p(logdir)
-      logfile = File.join(logdir, @start_time.dup.utc.strftime('%Y%m%dT%H%M%SZ.log.html'))
+      logfile = File.join(logdir, @data[:start_time] + '.log.html')
       warns = 0
       revision = nil
       open(File.join(tmpdir, "gathered"), "w") do |out|
@@ -543,7 +564,14 @@ module MswinBuild
         end
       end
       @title.insert(2, "#{warns}W") if warns > 0
-      @title.unshift("r#{revision}") if revision
+      @data[:warn] = "#{warns}W"
+      url = @data.delete(:svn_url)
+      if revision
+        @title.unshift("r#{revision}")
+        @data[:ruby_rev] = "r#{revision}"
+        @data[:version] = @data[:ruby_rev] + @data[:version]
+        @data[url] = revision
+      end
       open(logfile, "w") do |out|
         header(out)
         out.puts "    <ul>"
@@ -598,13 +626,14 @@ module MswinBuild
       end
 
       title = @title.join(' ')
-      time = File.basename(logfile, ".log.html.gz")
-      line = %'<a href="log/#{u time}.log.html.gz" name="#{u time}">#{h time}</a> #{h title} (<a href="log/#{u time}.diff.html.gz">#{@diff ? h(@diff) : "no diff"}</a>)<br>'
+      @data[:title] = title
+      time = @data[:start_time]
+      latest = %'<a href="log/#{u time}.log.html.gz" name="#{u time}">#{h time}</a> #{h title} (<a href="log/#{u time}.diff.html.gz">#{@diff ? h(@diff) : "no diff"}</a>)<br>'
       if mode == :recent
         old = old[0..99]
-        old.unshift(line)
+        old.unshift(latest)
       else
-        old.push(line)
+        old.push(latest)
       end
       open(filename, "w") do |f|
         f.print <<-EOH
@@ -637,6 +666,33 @@ module MswinBuild
   </body>
 </html>
         EOH
+      end
+
+      if mode == :recent
+        old = []
+        filename = File.join(@config["logdir"], "recent.ltsv")
+        if File.exist?(filename)
+          open(filename, "r") do |f|
+            f.each_line do
+              old << line.chomp
+            end
+          end
+        end
+
+        latest = @data.map{|k, v|
+          k = k.to_s
+          k.gsub!(/:/, '\\x3a')
+          v.gsub!(/\t/, ' ')
+          k = %'"#{k}"' if /\W/ =~ k
+          "#{k}:#{v}"
+        }.join("\t")
+        old.unshift(latest)
+
+        open(filename, "w") do |f|
+          old.take(100).each do |line|
+            f.puts line
+          end
+        end
       end
     end
   end
