@@ -559,7 +559,7 @@ module MswinBuild
             end
           ensure
             io.close
-            io.unlink rescue nil
+            File.unlink(io.path) rescue nil
           end
         end
       end
@@ -681,8 +681,8 @@ module MswinBuild
 
         latest = @data.map{|k, v|
           k = k.to_s
-          k.gsub!(/:/, '\\x3a')
-          v.gsub!(/\t/, ' ')
+          k = k.gsub(/:/, '\\x3a')
+          v = v.gsub(/\t/, ' ')
           k = %'"#{k}"' if /\W/ =~ k
           "#{k}:#{v}"
         }.join("\t")
