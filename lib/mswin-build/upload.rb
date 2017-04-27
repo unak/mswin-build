@@ -81,7 +81,7 @@ module MswinBuild
     branch = File.basename(logdir)
     container = File.basename(File.dirname(logdir))
     begin
-      res, body = service.get_blob(container, "#{branch}/recent.html")
+      _res, body = service.get_blob(container, "#{branch}/recent.html")
       server_start_time = body[/^<a href=.*+ name="(\w+)">/, 1]
     rescue Azure::Core::Http::HTTPError => e
       server_start_time = '00000000T000000Z'
@@ -89,9 +89,9 @@ module MswinBuild
         service.create_container(container, :public_access_level => 'container')
       end
     end
-    puts "Azure: #{branch} start_time: #{server_start_time}" if $debug
+    puts "Azure: #{branch} start_time: #{server_start_time}" if $DEBUG
 
-    latest = IO.foreach("#{logdir}/recent.html") do |line|
+    IO.foreach("#{logdir}/recent.html") do |line|
       break line[/^<a href=.*+ name="(\w+)">/, 1]
     end
 
@@ -131,7 +131,7 @@ module MswinBuild
     end
 
     open(filepath, 'rb') do |f|
-      puts "uploading '#{filepath}' as '#{blobname}'..." if $debug
+      puts "uploading '#{filepath}' as '#{blobname}'..." if $DEBUG
       service.create_block_blob(container, blobname, f, options)
     end
     true
