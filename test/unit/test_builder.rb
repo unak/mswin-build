@@ -278,6 +278,7 @@ env:
       assert_equal "12345", builder.get_current_revision
     ensure
       TOPLEVEL_BINDING.eval <<-EOS
+        undef ` #`
         alias ` orig_backquote #`
       EOS
     end
