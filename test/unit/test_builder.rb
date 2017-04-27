@@ -38,21 +38,21 @@ end
 
 class TestBuilder < Test::Unit::TestCase
   def self.startup
-    TOPLEVEL_BINDING.eval <<-EOS
+    Kernel.module_eval do
       alias orig_backquote ` #`
       def `(cmd) #`
         "Revision: 54321\n" +
         "URL: http://example.com/svn/ruby\n" +
         "Last Changed Rev: 12345\n"
       end
-    EOS
+    end
   end
 
   def self.shutdown
-    TOPLEVEL_BINDING.eval <<-EOS
+    Kernel.module_eval do
       undef ` #`
       alias ` orig_backquote #`
-    EOS
+    end
   end
 
   def setup
