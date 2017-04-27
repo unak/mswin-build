@@ -146,8 +146,8 @@ env:
     end
 
     recent = File.read(File.join(@tmpdir, "recent.html"))
-    assert_match /\bsuccess\b/, recent
-    assert_match /^<a href="[^"]+" name="[^"]+">[^<]+<\/a> r12345 /, recent
+    assert_match(/\bsuccess\b/, recent)
+    assert_match(/^<a href="[^"]+" name="[^"]+">[^<]+<\/a> r12345 /, recent)
   end
 
   def test_run_btest_failure
@@ -169,8 +169,8 @@ env:
     end
 
     recent = File.read(File.join(@tmpdir, "recent.html"))
-    assert_match /\b3BFail\b/, recent
-    assert_not_match /\bfailed\b/, recent
+    assert_match(/\b3BFail\b/, recent)
+    assert_not_match(/\bfailed\b/, recent)
   end
 
   def test_run_testrb_failure
@@ -192,8 +192,8 @@ env:
     end
 
     recent = File.read(File.join(@tmpdir, "recent.html"))
-    assert_match /\b4NotOK\b/, recent
-    assert_not_match /\bfailed\b/, recent
+    assert_match(/\b4NotOK\b/, recent)
+    assert_not_match(/\bfailed\b/, recent)
   end
 
   def test_run_test_all_failure
@@ -215,8 +215,8 @@ env:
     end
 
     recent = File.read(File.join(@tmpdir, "recent.html"))
-    assert_match /\b2F1E\b/, recent
-    assert_not_match /\bfailed\b/, recent
+    assert_match(/\b2F1E\b/, recent)
+    assert_not_match(/\bfailed\b/, recent)
   end
 
   def test_run_timeout
@@ -236,7 +236,7 @@ env:
     end
 
     recent = File.read(File.join(@tmpdir, "recent.html"))
-    assert_match /\bfailed\(test-all CommandTimeout\)/, recent
+    assert_match(/\bfailed\(test-all CommandTimeout\)/, recent)
   end
 
   def test_get_current_revision
