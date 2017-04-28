@@ -673,7 +673,7 @@ module MswinBuild
         filename = File.join(@config["logdir"], "recent.ltsv")
         if File.exist?(filename)
           open(filename, "r") do |f|
-            f.each_line do
+            f.each_line do |line|
               old << line.chomp
             end
           end

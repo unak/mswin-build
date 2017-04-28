@@ -74,11 +74,11 @@ env:
     FileUtils.rm_r(@tmpdir)
   end
 
-  def run_builder(hash = {}, &blk)
+  def run_builder(**opt, &blk)
     builder = MswinBuild::Builder.new(target: "dummy", settings: @yaml.path)
-    if !hash.empty?
+    if !opt.empty?
       config = builder.instance_variable_get(:@config)
-      config["timeout"]["test-all"] = hash[:timeout] if hash[:timeout]
+      config["timeout"]["test-all"] = opt[:timeout] if opt[:timeout]
       builder.instance_variable_set(:@config, config)
     end
     begin
@@ -109,10 +109,10 @@ env:
 
       ProcessMock.set_callback(commands, &blk)
 
-      builder.run
+      assert builder.run, "returned error status"
 
       assert_empty commands
-      assert_equal hash[:revision].to_s, builder.get_last_revision if hash[:revision]
+      assert_equal opt[:revision].to_s, builder.get_last_revision if opt[:revision]
     ensure
       Object.class_eval do
         remove_const :Process
@@ -146,6 +146,35 @@ env:
     assert_raise(RuntimeError) do
       MswinBuild::Builder.new(target: "dummy", settings: @yaml.path, foo: nil)
     end
+
+    run_builder(revision: 12345) do |args, commands|
+      assert_not_empty commands, "for ``#{args[0]}''"
+      assert_match commands.shift, args[0]
+
+      case args[0]
+      when /^svn checkout\b/
+        Dir.mkdir("ruby")
+      when /^svn info\b/
+        if args[1].is_a?(Hash) && args[1][:out]
+          args[1][:out].puts `svn info`
+        end
+      end
+
+      StatusMock.new(0)
+    end
+
+    recent = File.read(File.join(@tmpdir, "recent.html"))
+    assert_match(/\bsuccess\b/, recent)
+    assert_match(/^<a href="[^"]+" name="[^"]+">[^<]+<\/a> r12345 /, recent)
+    assert_not_match(/\bfailed\b/, recent)
+
+    recent = File.read(File.join(@tmpdir, "recent.ltsv"))
+    assert_match(/\bresult:success\b/, recent)
+    assert_match(/\bruby_rev:r12345\b/, recent)
+    assert_match(/"http\\x3A\/\/[^:]+":12345\b/, recent)
+    assert_not_match(/\btitle:[^\t]*\bfailed\b/, recent)
+
+    sleep 2
 
     run_builder(revision: 12345) do |args, commands|
       assert_not_empty commands, "for ``#{args[0]}''"
