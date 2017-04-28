@@ -569,7 +569,7 @@ module MswinBuild
       if revision
         @title.unshift("r#{revision}")
         @data[:ruby_rev] = "r#{revision}"
-        @data[:version] = @data[:ruby_rev] + @data[:version]
+        @data[:version] = "#{@data[:ruby_rev]} #{@data[:version]}"
         @data[url] = revision
       end
       open(logfile, "w") do |out|
