@@ -1,4 +1,4 @@
-#! ruby
+#!ruby
 # expected ruby 1.9.x or later.
 
 require "webrick"
@@ -7,9 +7,12 @@ class WEBrick::HTTPServer
   alias :__rewrite_old_service :service
   def service(req, res)
     ret = __rewrite_old_service(req, res)
-    if /\.html\.gz\z/ =~ req.path
+    case req.path
+    when /\.html\.gz\z/
       res.header["content-encoding"] = "gzip"
       res.header["content-type"] = "text/html"
+    when /\.ltsv\z/
+      res.header["content-type"] = "text/plain"
     end
   end
 end
