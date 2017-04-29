@@ -256,6 +256,7 @@ module MswinBuild
           io.puts "exit #{status.to_i}" unless status.nil?
           io.puts "failed(#{name})"
           @title << "failed(#{name})" if check_retval || status.nil?
+          @data["failure_#{name}"] = "failed(#{name})"
           @data[:result] = "failure"
           @links[name] << "failed"
           if $DEBUG
@@ -269,6 +270,7 @@ module MswinBuild
         io.puts $!.backtrace.join("\n| ")
         io.puts "failed(#{name} CommandTimeout)"
         @title << "failed(#{name} CommandTimeout)"
+        @data["failure_#{name}"] = "failed(#{name} CommandTimeout)"
         @data[:result] = "failure"
         @links[name] << "failed"
         if $DEBUG
@@ -399,8 +401,10 @@ module MswinBuild
         io.rewind
         if %r'^FAIL (\d+)/\d+' =~ io.read
           @title << "#{$1}BFail"
+          @data["failure_btest"] = "#{$1}BFail"
         else
           @title << "failed(btest)"
+          @data["failure_btest"] = "failed"
         end
         @data[:result] = "failure"
       end
@@ -412,8 +416,10 @@ module MswinBuild
         io.rewind
         if %r'^not ok/test: \d+ failed (\d+)' =~ io.read
           @title << "#{$1}NotOK"
+          @data["failure_test.rb"] = "#{$1}NotOK"
         else
           @title << "failed(test.rb)"
+          @data["failure_test.rb"] = "failed"
         end
         @data[:result] = "failure"
       end
@@ -468,9 +474,13 @@ module MswinBuild
         io.rewind
         if %r'^\d+ tests, \d+ assertions, (\d+) failures, (\d+) errors, (\d+) skips' =~ io.read
           @title << "#{$1}F#{$2}E"
-          @data[:result] = "failure" if $1.to_i + $2.to_i > 0
+          if $1.to_i + $2.to_i > 0
+            @data["failure_test-all"] = "#{$1}F#{$2}E"
+            @data[:result] = "failure" 
+          end
         else
           @title << "failed(test-all)"
+          @data["failure_test-all"] = "failed"
           @data[:result] = "failure"
         end
       end
@@ -563,15 +573,27 @@ module MswinBuild
           end
         end
       end
-      @title.insert(2, "#{warns}W") if warns > 0
+      title = @title[0, 2]
       @data[:warn] = "#{warns}W"
+      if warns > 0
+        @title.insert(2, @data[:warn])
+        title << @data[:warn]
+      end
       url = @data.delete(:svn_url)
       if revision
-        @title.unshift("r#{revision}")
         @data[:ruby_rev] = "r#{revision}"
+        @title.unshift(@data[:ruby_rev])
+        title.unshift(@data[:ruby_rev])
         @data[:version] = "#{@data[:ruby_rev]} #{@data[:version]}"
         @data[url] = revision
       end
+      @data.each_pair do |k, v|
+        if k.is_a?(String) && /^failure_/ =~ k
+          v = "#{$'}:#{v}" if $' == "rubyspec"
+          title << v
+        end
+      end
+      @data[:title] = title.join(' ')
       open(logfile, "w") do |out|
         header(out)
         out.puts "    <ul>"
@@ -626,7 +648,6 @@ module MswinBuild
       end
 
       title = @title.join(' ')
-      @data[:title] = title
       time = @data[:start_time]
       latest = %'<a href="log/#{u time}.log.html.gz" name="#{u time}">#{h time}</a> #{h title} (<a href="log/#{u time}.diff.html.gz">#{@diff ? h(@diff) : "no diff"}</a>)<br>'
       if mode == :recent
@@ -683,7 +704,7 @@ module MswinBuild
           k = k.to_s
           k = k.gsub(/:/, '\\x3A')
           v = v.gsub(/\t/, ' ')
-          k = %'"#{k}"' if /\W/ =~ k
+          k = %'"#{k}"' if /\\/ =~ k
           "#{k}:#{v}"
         }.join("\t")
         old.unshift(latest)

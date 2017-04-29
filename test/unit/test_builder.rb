@@ -201,7 +201,7 @@ env:
     assert_match(/\bresult:success\b/, recent)
     assert_match(/\bruby_rev:r12345\b/, recent)
     assert_match(/"http\\x3A\/\/[^:]+":12345\b/, recent)
-    assert_not_match(/\btitle:[^\t]*\bfailed\b/, recent)
+    assert_not_match(/\btitle:[^\t]*\b(failed|success|\dE\dF)\b/, recent)
   end
 
   def test_run_btest_failure
@@ -228,6 +228,7 @@ env:
 
     recent = File.read(File.join(@tmpdir, "recent.ltsv"))
     assert_match(/\bresult:failure\b/, recent)
+    assert_match(/\bfailure_btest:3BFail\b/, recent)
     assert_match(/\btitle:[^\t]*\b3BFail\b/, recent)
     assert_not_match(/\btitle:[^\t]*\bfailed\b/, recent)
   end
@@ -256,6 +257,7 @@ env:
 
     recent = File.read(File.join(@tmpdir, "recent.ltsv"))
     assert_match(/\bresult:failure\b/, recent)
+    assert_match(/\bfailure_test.rb:4NotOK\b/, recent)
     assert_match(/\btitle:[^\t]*\b4NotOK\b/, recent)
     assert_not_match(/\btitle:[^\t]*\bfailed\b/, recent)
   end
@@ -284,6 +286,7 @@ env:
 
     recent = File.read(File.join(@tmpdir, "recent.ltsv"))
     assert_match(/\bresult:failure\b/, recent)
+    assert_match(/\bfailure_test-all:2F1E\b/, recent)
     assert_match(/\btitle:[^\t]*\b2F1E\b/, recent)
     assert_not_match(/\btitle:[^\t]*\bfailed\b/, recent)
   end
@@ -309,6 +312,7 @@ env:
 
     recent = File.read(File.join(@tmpdir, "recent.ltsv"))
     assert_match(/\bresult:failure\b/, recent)
+    assert_match(/\bfailure_test-all:failed\(test-all CommandTimeout\)/, recent)
     assert_match(/\btitle:[^\t]*\bfailed\(test-all CommandTimeout\)/, recent)
   end
 
