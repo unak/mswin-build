@@ -489,6 +489,7 @@ module MswinBuild
     define_buildmethod(:rubyspec) do |io, tmpdir|
       heading(io, "rubyspec")
       io.puts "skipped."
+      @data["failure_rubyspec"] = "skipped"
       @links["rubyspec"] << "skipped"
     end
 
@@ -589,7 +590,13 @@ module MswinBuild
       end
       @data.each_pair do |k, v|
         if k.is_a?(String) && /^failure_/ =~ k
-          v = "#{$'}:#{v}" if $' == "rubyspec"
+          if $' == "rubyspec"
+            if v == "skipped"
+              next
+            else
+              v = "rubyspec:#{v}" 
+            end
+          end
           title << v
         end
       end

@@ -167,10 +167,12 @@ env:
     assert_match(/\bsuccess\b/, recent)
     assert_match(/^<a href="[^"]+" name="[^"]+">[^<]+<\/a> r12345 /, recent)
     assert_not_match(/\bfailed\b/, recent)
+    assert_not_match(/\bskipped\b/, recent)
 
     recent = File.read(File.join(@tmpdir, "recent.ltsv"))
     assert_match(/\bresult:success\b/, recent)
     assert_match(/\bruby_rev:r12345\b/, recent)
+    assert_match(/\bfailure_rubyspec:skipped\b/, recent)
     assert_match(/"http\\x3A\/\/[^:]+":12345\b/, recent)
     assert_not_match(/\btitle:[^\t]*\bfailed\b/, recent)
 
