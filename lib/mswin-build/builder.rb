@@ -62,6 +62,7 @@ module MswinBuild
       @config["timeout"]["install-doc"] ||= @config["timeout"]["default"]
       @config["timeout"]["test-knownbug"] ||= @config["timeout"]["default"]
       @config["timeout"]["test-all"] ||= @config["timeout"]["default_long"]
+      @config["timeout"]["rubyspec"] ||= @config["timeout"]["default_long"]
 
       @last_status = nil
     end
@@ -487,10 +488,28 @@ module MswinBuild
     end
 
     define_buildmethod(:rubyspec) do |io, tmpdir|
-      heading(io, "rubyspec")
-      io.puts "skipped."
-      @data["failure_rubyspec"] = "skipped"
-      @links["rubyspec"] << "skipped"
+      if ruby_version >= "2.5.0"
+        ret = do_command(io, "rubyspec", 'nmake -l MSPECOPT="-V -f s" RUBYOPT=-w rubyspec', true, false, nil)
+        if !ret && !ret.nil?
+          io.rewind
+          if %r'^\d+ files, \d+ examples, \d+ expectations, (\d+) failures, (\d+) errors, \d+ tagged' =~ io.read
+            @title << "#{$1}F#{$2}E"
+            if $1.to_i + $2.to_i > 0
+              @data["failure_rubyspec"] = "#{$1}F#{$2}E"
+              @data[:result] = "failure" 
+            end
+          else
+            @title << "failed(rubyspec)"
+            @data["failure_rubyspec"] = "failed"
+            @data[:result] = "failure"
+          end
+        end
+      else
+        heading(io, "rubyspec")
+        io.puts "skipped."
+        @data["failure_rubyspec"] = "skipped"
+        @links["rubyspec"] << "skipped"
+      end
     end
 
     define_buildmethod(:end_) do |io, tmpdir|

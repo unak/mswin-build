@@ -105,6 +105,7 @@ env:
         /^nmake -l install-doc\s*$/,
         /^nmake -l "OPTS=-v -q" test-knownbug\s*$/,
         /^nmake -l TESTS=-v RUBYOPT=-w test-all\s*$/,
+        /^nmake -l MSPECOPT="-V -f s" RUBYOPT=-w rubyspec\s*$/,
       ]
 
       ProcessMock.set_callback(commands, &blk)
@@ -172,7 +173,6 @@ env:
     recent = File.read(File.join(@tmpdir, "recent.ltsv"))
     assert_match(/\bresult:success\b/, recent)
     assert_match(/\bruby_rev:r12345\b/, recent)
-    assert_match(/\bfailure_rubyspec:skipped\b/, recent)
     assert_match(/"http\\x3A\/\/[^:]+":12345\b/, recent)
     assert_not_match(/\btitle:[^\t]*\bfailed\b/, recent)
 
