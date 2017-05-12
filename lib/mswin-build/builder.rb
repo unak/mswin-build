@@ -609,11 +609,15 @@ module MswinBuild
       end
       @data.each_pair do |k, v|
         if k.is_a?(String) && /^failure_/ =~ k
-          if $' == "rubyspec"
-            if v == "skipped"
-              next
-            else
-              v = "rubyspec:#{v}" 
+          if v == "failed"
+            v = "failed(#{$'})"
+          else
+            if $' == "rubyspec"
+              if v == "skipped"
+                next
+              else
+                v = "rubyspec:#{v}" 
+              end
             end
           end
           title << v
