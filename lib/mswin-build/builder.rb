@@ -577,7 +577,7 @@ module MswinBuild
       open(File.join(tmpdir, "gathered"), "w") do |out|
         files.each_with_index do |io, i|
           next unless io
-          io.reopen(io.path, "r")
+          io.reopen(io.path, "r", encoding: "ascii-8bit")
           begin
             io.each_line do |line|
               line = h(line) unless /^<a / =~ line
