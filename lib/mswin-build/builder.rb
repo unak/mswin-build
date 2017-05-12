@@ -299,7 +299,7 @@ module MswinBuild
     def self.define_buildmethod(method, &blk)
       define_method("bare_#{method.to_s}", blk)
       define_method(method) do |tmpdir|
-        io = open(File.join(tmpdir, method.to_s), "w+")
+        io = open(File.join(tmpdir, method.to_s), "w+", encoding: "ascii-8bit")
         begin
           __send__("bare_#{method.to_s}", io, tmpdir)
         ensure
