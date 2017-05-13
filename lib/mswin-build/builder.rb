@@ -489,7 +489,7 @@ module MswinBuild
 
     define_buildmethod(:rubyspec) do |io, tmpdir|
       if ruby_version >= "2.5.0"
-        ret = do_command(io, "rubyspec", 'nmake -l MSPECOPT="-V -f s" RUBYOPT=-w test-rubyspec', true, false, nil)
+        ret = do_command(io, "rubyspec", 'nmake -l MSPECOPT="-V -f s" test-rubyspec', true, false, nil)
         if !ret && !ret.nil?
           io.rewind
           if /^\d+ files, \d+ examples, \d+ expectations, (\d+) failures, (\d+) errors, \d+ tagged/ =~ io.read.b
