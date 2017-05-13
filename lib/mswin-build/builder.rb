@@ -168,7 +168,7 @@ module MswinBuild
       return nil unless file
 
       cmd = "#{@config['gzip']} -d -c #{File.join(@config['logdir'], file)}"
-      `#{cmd}`.scan(/^(?:SVN )?Last Changed Rev: (\d+)$/) do |line|
+      `#{cmd}`.b.scan(/^(?:SVN )?Last Changed Rev: (\d+)$/) do |line|
         return $1
       end
       nil
