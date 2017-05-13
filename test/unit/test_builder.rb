@@ -105,7 +105,7 @@ env:
         /^nmake -l install-doc\s*$/,
         /^nmake -l "OPTS=-v -q" test-knownbug\s*$/,
         /^nmake -l TESTS=-v RUBYOPT=-w test-all\s*$/,
-        /^nmake -l MSPECOPT="-V -f s" RUBYOPT=-w test-rubyspec\s*$/,
+        /^nmake -l MSPECOPT="-V -f s" test-rubyspec\s*$/,
       ]
 
       ProcessMock.set_callback(commands, &blk)

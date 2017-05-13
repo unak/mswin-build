@@ -492,8 +492,8 @@ module MswinBuild
         ret = do_command(io, "rubyspec", 'nmake -l MSPECOPT="-V -f s" test-rubyspec', true, false, nil)
         if !ret && !ret.nil?
           io.rewind
-          if /^\d+ files, \d+ examples, \d+ expectations, (\d+) failures, (\d+) errors, \d+ tagged/ =~ io.read.b
-            @title << "#{$1}F#{$2}E"
+          if /^\d+ files?, \d+ examples?, \d+ expectations?, (\d+) failures?, (\d+) errors?, \d+ tagged/ =~ io.read
+            @title << "rubyspec:#{$1}F#{$2}E"
             if $1.to_i + $2.to_i > 0
               @data["failure_rubyspec"] = "#{$1}F#{$2}E"
               @data[:result] = "failure" 
