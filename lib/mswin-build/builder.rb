@@ -83,6 +83,7 @@ module MswinBuild
           ENV[name] = value
         end
         files = []
+        @fails = []
         Dir.mktmpdir("mswin-build", @config["tmpdir"]) do |tmpdir|
           files << baseinfo(tmpdir)
           files << checkout(tmpdir)
@@ -109,14 +110,23 @@ module MswinBuild
             files << rubyspec(tmpdir)
           end
           files << end_(tmpdir)
-          logfile = gather_log(files, tmpdir)
+          logfile, failfile = gather_log(files, tmpdir)
+          files.each do |io|
+            if io
+              io.close
+              File.unlink(io.path)
+            end
+          end
           difffile = diff(tmpdir, logfile)
           logfile = gzip(logfile)
           @data[:compressed_loghtml_relpath] = File.join("log", File.basename(logfile))
           difffile = gzip(difffile)
           @data[:compressed_diffhtml_relpath] = File.join("log", File.basename(difffile))
-          add_recent(logfile)
-          add_summary(logfile)
+          failfile = gzip(failfile)
+          @data[:compressed_failhtml_relpath] = File.join("log", File.basename(failfile))
+
+          add_recent(logfile, difffile, failfile)
+          add_summary(logfile, difffile, failfile)
 
           MswinBuild.run_upload_hooks
         end
@@ -254,6 +264,7 @@ module MswinBuild
         end
 
         if status.nil? || !status.success?
+          @fails << io
           io.puts "exit #{status.to_i}" unless status.nil?
           io.puts "failed(#{name})"
           @title << "failed(#{name})" if check_retval || status.nil?
@@ -266,6 +277,7 @@ module MswinBuild
           end
         end
       rescue Timeout::Error
+        @fails << io
         io.puts
         io.printf "|output interval exceeds %.1f seconds. (CommandTimeout)", @config["timeout"][name] || @config["timeout"]["default"]
         io.puts $!.backtrace.join("\n| ")
@@ -399,6 +411,7 @@ module MswinBuild
     define_buildmethod(:btest) do |io, tmpdir|
       ret = do_command(io, "btest", 'nmake -l "OPTS=-v -q" btest', true, false)
       if !ret && !ret.nil?
+        @fails << io unless @fails.include?(io)
         io.rewind
         if %r'^FAIL (\d+)/\d+' =~ io.read
           @title << "#{$1}BFail"
@@ -414,6 +427,7 @@ module MswinBuild
     define_buildmethod(:testrb) do |io, tmpdir|
       ret = do_command(io, "test.rb", "./miniruby sample/test.rb", true, false)
       if !ret && !ret.nil?
+        @fails << io unless @fails.include?(io)
         io.rewind
         if %r'^not ok/test: \d+ failed (\d+)' =~ io.read
           @title << "#{$1}NotOK"
@@ -476,10 +490,12 @@ module MswinBuild
         if %r'^\d+ tests, \d+ assertions, (\d+) failures, (\d+) errors, (\d+) skips' =~ io.read
           @title << "#{$1}F#{$2}E"
           if $1.to_i + $2.to_i > 0
+            @fails << io unless @fails.include?(io)
             @data["failure_test-all"] = "#{$1}F#{$2}E"
             @data[:result] = "failure" 
           end
         else
+          @fails << io unless @fails.include?(io)
           @title << "failed(test-all)"
           @data["failure_test-all"] = "failed"
           @data[:result] = "failure"
@@ -495,10 +511,12 @@ module MswinBuild
           if /^\d+ files?, \d+ examples?, \d+ expectations?, (\d+) failures?, (\d+) errors?, \d+ tagged/ =~ io.read
             @title << "rubyspec:#{$1}F#{$2}E"
             if $1.to_i + $2.to_i > 0
+              @fails << io unless @fails.include?(io)
               @data["failure_rubyspec"] = "#{$1}F#{$2}E"
               @data[:result] = "failure" 
             end
           else
+            @fails << io unless @fails.include?(io)
             @title << "failed(rubyspec)"
             @data["failure_rubyspec"] = "failed"
             @data[:result] = "failure"
@@ -569,30 +587,41 @@ module MswinBuild
     end
 
     def gather_log(files, tmpdir)
-      logdir = File.join(@config["logdir"], "log")
-      FileUtils.mkdir_p(logdir)
-      logfile = File.join(logdir, @data[:start_time] + '.log.html')
       warns = 0
       revision = nil
-      open(File.join(tmpdir, "gathered"), "w") do |out|
-        files.each_with_index do |io, i|
+      open(File.join(tmpdir, "gathered"), "wb") do |out|
+        files.each do |io|
           next unless io
           io.reopen(io.path, "r", encoding: "ascii-8bit")
-          begin
-            io.each_line do |line|
-              line = h(line) unless /^<a / =~ line
-              out.write line
-              warns += line.scan(/warn/i).length
-              if File.basename(io.path) == "checkout" && /^(?:SVN )?Last Changed Rev: (\d+)$/ =~ line
-                revision = $1
-              end
+          io.each_line do |line|
+            line = h(line) unless /^<a / =~ line
+            out.write line
+            warns += line.scan(/warn/i).length
+            if File.basename(io.path) == "checkout" && /^(?:SVN )?Last Changed Rev: (\d+)$/ =~ line
+              revision = $1
             end
-          ensure
-            io.close
-            File.unlink(io.path) rescue nil
           end
         end
       end
+
+      open(File.join(tmpdir, "failed"), "wb") do |out|
+        if @fails.empty?
+          out.puts "No failures"
+          break
+        end
+
+        @fails.each do |io|
+          io.rewind
+          lines = io.read.lines
+          out.puts lines.shift
+          total = lines.size
+          out.puts "...(snip #{total - 20} lines)..." if total > 20
+          lines.last(20).each do |line|
+            out.write h(line)
+          end
+        end
+      end
+
       title = @title[0, 2]
       @data[:warn] = "#{warns}W"
       if warns > 0
@@ -623,9 +652,16 @@ module MswinBuild
           title << v
         end
       end
+
       @data[:title] = title.join(' ')
-      open(logfile, "w") do |out|
+
+      logdir = File.join(@config["logdir"], "log")
+      FileUtils.mkdir_p(logdir)
+      logfile = File.join(logdir, @data[:start_time] + '.log.html')
+      failfile = File.join(logdir, @data[:start_time] + '.fail.html')
+      open(logfile, "wb") do |out|
         header(out)
+        out.puts "    <p><a href=\"#{File.basename(logfile) + '.gz'}\">#{@data[:start_time]}</a>(<a href=\"#{File.basename(failfile) + '.gz'}\">failure</a>)</p>"
         out.puts "    <ul>"
         @links.each_value do |anchor, text, result = nil|
           out.puts %'      <li><a href="\##{anchor}">#{text}</a>#{" #{result}" if result}</li>'
@@ -636,12 +672,26 @@ module MswinBuild
         out.puts "    </pre>"
         footer(out)
       end
-      logfile
+
+      open(failfile, "wb") do |out|
+        header(out)
+        out.puts "    <ul>"
+        @links.each_value do |anchor, text, result = nil|
+          out.puts %'      <li><a href="\##{anchor}">#{text}</a> #{result}</li>' if result
+        end
+        out.puts "    </ul>"
+        out.puts "    <pre>"
+        out.write insert_href(IO.read(File.join(tmpdir, "failed")), File.basename(failfile) + ".gz", File.basename(logfile) + ".gz")
+        out.puts "    </pre>"
+        footer(out)
+      end
+
+      return logfile, failfile
     end
 
     def diff(tmpdir, logfile)
       filename = logfile.sub(/\.log/, ".diff")
-      open(filename, "w") do |out|
+      open(filename, "wb") do |out|
         header(out)
         out.puts %'<p>Skipped. See the <a href="#{u File.basename(logfile)}.gz">full build log</a>.</p>'
         footer(out)
@@ -654,19 +704,19 @@ module MswinBuild
       file + ".gz"
     end
 
-    def insert_href(html, file)
-      html.gsub(/^<a name="(.+?)">== /, "<a name=\"\\1\" href=\"#{file}\#\\1\">== ")
+    def insert_href(html, file, orig = nil)
+      html.gsub(/^<a name="(.+?)">(== .*)$/, "<a name=\"\\1\" href=\"#{file}\#\\1\">\\2#{%' (<a href=\"#{orig}\#\\1\">full</a>)' if orig}")
     end
 
-    def add_recent(logfile)
-      add_recent_summary(logfile, :recent)
+    def add_recent(logfile, difffile, failfile)
+      add_recent_summary(logfile, difffile, failfile, :recent)
     end
 
-    def add_summary(logfile)
-      add_recent_summary(logfile, :summary)
+    def add_summary(logfile, difffile, failfile)
+      add_recent_summary(logfile, difffile, failfile, :summary)
     end
 
-    def add_recent_summary(logfile, mode)
+    def add_recent_summary(logfile, difffile, failfile, mode)
       if mode == :recent
         filename = File.join(@config["logdir"], "recent.html")
       else
@@ -683,14 +733,14 @@ module MswinBuild
 
       title = @title.join(' ')
       time = @data[:start_time]
-      latest = %'<a href="log/#{u time}.log.html.gz" name="#{u time}">#{h time}</a> #{h title} (<a href="log/#{u time}.diff.html.gz">#{@diff ? h(@diff) : "no diff"}</a>)<br>'
+      latest = %'<a href="log/#{File.basename(logfile)}" name="#{u time}">#{h time}</a>(<a href="log/#{File.basename(failfile)}">failure</a>) #{h title} (<a href="log/#{File.basename(difffile)}">#{@diff ? h(@diff) : "no diff"}</a>)<br>'
       if mode == :recent
         old = old[0..99]
         old.unshift(latest)
       else
         old.push(latest)
       end
-      open(filename, "w") do |f|
+      open(filename, "wb") do |f|
         f.print <<-EOH
 <html>
   <head>
@@ -743,7 +793,7 @@ module MswinBuild
         }.join("\t")
         old.unshift(latest)
 
-        open(filename, "w") do |f|
+        open(filename, "wb") do |f|
           old.take(100).each do |line|
             f.puts line
           end

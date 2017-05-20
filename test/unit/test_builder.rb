@@ -72,7 +72,7 @@ env:
 
   def teardown
     @yaml.close!
-    FileUtils.rm_r(@tmpdir)
+    FileUtils.rm_rf(@tmpdir)
   end
 
   def run_builder(**opt, &blk)
@@ -129,6 +129,7 @@ env:
     files = Dir.glob(File.join(@tmpdir, "log", "*"))
     assert files.reject! {|e| /\.log\.html\.gz\z/ =~ e}
     assert files.reject! {|e| /\.diff\.html\.gz\z/ =~ e}
+    assert files.reject! {|e| /\.fail\.html\.gz\z/ =~ e}
     assert_empty files
   end
 
@@ -167,7 +168,7 @@ env:
 
     recent = File.read(File.join(@tmpdir, "recent.html"))
     assert_match(/\bsuccess\b/, recent)
-    assert_match(/^<a href="[^"]+" name="[^"]+">[^<]+<\/a> r12345 /, recent)
+    assert_match(/^<a href="[^"]+" name="[^"]+">[^<]+<\/a>\(<a href="[^"]+">failure<\/a>\) r12345 /, recent) #"
     assert_not_match(/\bfailed\b/, recent)
     assert_not_match(/\bskipped\b/, recent)
 
@@ -197,7 +198,7 @@ env:
 
     recent = File.read(File.join(@tmpdir, "recent.html"))
     assert_match(/\bsuccess\b/, recent)
-    assert_match(/^<a href="[^"]+" name="[^"]+">[^<]+<\/a> r12345 /, recent)
+    assert_match(/^<a href="[^"]+" name="[^"]+">[^<]+<\/a>\(<a href="[^"]+">failure<\/a>\) r12345 /, recent) #"
     assert_not_match(/\bfailed\b/, recent)
 
     recent = File.read(File.join(@tmpdir, "recent.ltsv"))
@@ -210,8 +211,19 @@ env:
     assert logs.count > 0, "some logs must be written"
     logs.each do |log|
       fn = Regexp.escape(File.basename(log))
+      fn2 = fn.sub(/log/, "fail")
       Zlib::GzipReader.open(log) do |gz|
-        assert_match(/^<a name="(.+?)" href="#{fn}\#\1">== /, gz.read)
+        html = gz.read
+        assert_match(/<p><a href="#{fn}">[^<]+<\/a>\(<a href="#{fn2}">failure<\/a>\)<\/p>/, html)
+        assert_match(/^<a name="(.+?)" href="#{fn}\#\1">== /, html)
+      end
+    end
+
+    fails = Dir.glob(File.join(@tmpdir, "log", "*.fail.html.gz"))
+    assert fails.count > 0, "some fail htmls must be written"
+    fails.each do |log|
+      Zlib::GzipReader.open(log) do |gz|
+        assert_match(/^No failures$/, gz.read)
       end
     end
   end
@@ -243,6 +255,16 @@ env:
     assert_match(/\bfailure_btest:3BFail\b/, recent)
     assert_match(/\btitle:[^\t]*\b3BFail\b/, recent)
     assert_not_match(/\btitle:[^\t]*\bfailed\b/, recent)
+
+    fails = Dir.glob(File.join(@tmpdir, "log", "*.fail.html.gz"))
+    assert fails.count > 0, "some fail htmls must be written"
+    fails.each do |log|
+      fn = Regexp.escape(File.basename(log))
+      fn2 = fn.sub(/fail/, "log")
+      Zlib::GzipReader.open(log) do |gz|
+        assert_match(/^<a name="(btest)" href="#{fn}\#\1">== .*\(<a href="#{fn2}\#\1">full<\/a>\)$/, gz.read)
+      end
+    end
   end
 
   def test_run_testrb_failure
@@ -272,6 +294,16 @@ env:
     assert_match(/\bfailure_test.rb:4NotOK\b/, recent)
     assert_match(/\btitle:[^\t]*\b4NotOK\b/, recent)
     assert_not_match(/\btitle:[^\t]*\bfailed\b/, recent)
+
+    fails = Dir.glob(File.join(@tmpdir, "log", "*.fail.html.gz"))
+    assert fails.count > 0, "some fail htmls must be written"
+    fails.each do |log|
+      fn = Regexp.escape(File.basename(log))
+      fn2 = fn.sub(/fail/, "log")
+      Zlib::GzipReader.open(log) do |gz|
+        assert_match(/^<a name="(test\.rb)" href="#{fn}\#\1">== .*\(<a href="#{fn2}\#\1">full<\/a>\)$/, gz.read)
+      end
+    end
   end
 
   def test_run_test_all_failure
@@ -301,6 +333,16 @@ env:
     assert_match(/\bfailure_test-all:2F1E\b/, recent)
     assert_match(/\btitle:[^\t]*\b2F1E\b/, recent)
     assert_not_match(/\btitle:[^\t]*\bfailed\b/, recent)
+
+    fails = Dir.glob(File.join(@tmpdir, "log", "*.fail.html.gz"))
+    assert fails.count > 0, "some fail htmls must be written"
+    fails.each do |log|
+      fn = Regexp.escape(File.basename(log))
+      fn2 = fn.sub(/fail/, "log")
+      Zlib::GzipReader.open(log) do |gz|
+        assert_match(/^<a name="(test-all)" href="#{fn}\#\1">== .*\(<a href="#{fn2}\#\1">full<\/a>\)$/, gz.read)
+      end
+    end
   end
 
   def test_run_timeout
@@ -326,6 +368,16 @@ env:
     assert_match(/\bresult:failure\b/, recent)
     assert_match(/\bfailure_test-all:failed\(test-all CommandTimeout\)/, recent)
     assert_match(/\btitle:[^\t]*\bfailed\(test-all CommandTimeout\)/, recent)
+
+    fails = Dir.glob(File.join(@tmpdir, "log", "*.fail.html.gz"))
+    assert fails.count > 0, "some fail htmls must be written"
+    fails.each do |log|
+      fn = Regexp.escape(File.basename(log))
+      fn2 = fn.sub(/fail/, "log")
+      Zlib::GzipReader.open(log) do |gz|
+        assert_match(/^<a name="(.+?)" href="#{fn}\#\1">== .*\(<a href="#{fn2}\#\1">full<\/a>\)$/, gz.read)
+      end
+    end
   end
 
   def test_get_current_revision
