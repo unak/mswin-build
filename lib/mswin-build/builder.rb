@@ -668,7 +668,7 @@ module MswinBuild
         end
         out.puts "    </ul>"
         out.puts "    <pre>"
-        out.write insert_href(IO.read(File.join(tmpdir, "gathered")), File.basename(logfile) + ".gz")
+        out.write insert_href(IO.read(File.join(tmpdir, "gathered"), encoding: 'ascii-8bit'), File.basename(logfile) + ".gz")
         out.puts "    </pre>"
         footer(out)
       end
@@ -681,7 +681,7 @@ module MswinBuild
         end
         out.puts "    </ul>"
         out.puts "    <pre>"
-        out.write insert_href(IO.read(File.join(tmpdir, "failed")), File.basename(failfile) + ".gz", File.basename(logfile) + ".gz")
+        out.write insert_href(IO.read(File.join(tmpdir, "failed"), encoding: 'ascii-8bit'), File.basename(failfile) + ".gz", File.basename(logfile) + ".gz")
         out.puts "    </pre>"
         footer(out)
       end
