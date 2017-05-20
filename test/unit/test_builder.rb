@@ -2,6 +2,7 @@ require "fileutils"
 require "tmpdir"
 require "tempfile"
 require "test/unit"
+require "zlib"
 require "mswin-build/builder.rb"
 
 module ProcessMock
@@ -204,6 +205,15 @@ env:
     assert_match(/\bruby_rev:r12345\b/, recent)
     assert_match(/"http\\x3A\/\/[^:]+":12345\b/, recent)
     assert_not_match(/\btitle:[^\t]*\b(failed|success|\dE\dF)\b/, recent)
+
+    logs = Dir.glob(File.join(@tmpdir, "log", "*.log.html.gz"))
+    assert logs.count > 0, "some logs must be written"
+    logs.each do |log|
+      fn = Regexp.escape(File.basename(log))
+      Zlib::GzipReader.open(log) do |gz|
+        assert_match(/^<a name="(.+?)" href="#{fn}\#\1">== /, gz.read)
+      end
+    end
   end
 
   def test_run_btest_failure

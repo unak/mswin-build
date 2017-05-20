@@ -292,7 +292,7 @@ module MswinBuild
       end
       anchor = u name.to_s.tr('_', '-')
       text = h name.to_s.tr('_', '-')
-      io.puts %'<a name="#{anchor}">== #{text}</a> \# #{h Time.now.iso8601}'
+      io.puts %'<a name="#{anchor}">== #{text} \# #{h Time.now.iso8601}</a>'
       @links[name] = [anchor, text]
     end
 
@@ -632,7 +632,7 @@ module MswinBuild
         end
         out.puts "    </ul>"
         out.puts "    <pre>"
-        out.write IO.read(File.join(tmpdir, "gathered"))
+        out.write insert_href(IO.read(File.join(tmpdir, "gathered")), File.basename(logfile) + ".gz")
         out.puts "    </pre>"
         footer(out)
       end
@@ -652,6 +652,10 @@ module MswinBuild
     def gzip(file)
       system("#{@config['gzip']} #{file}")
       file + ".gz"
+    end
+
+    def insert_href(html, file)
+      html.gsub(/^<a name="(.+?)">== /, "<a name=\"\\1\" href=\"#{file}\#\\1\">== ")
     end
 
     def add_recent(logfile)
