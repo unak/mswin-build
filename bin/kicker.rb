@@ -32,6 +32,7 @@ rescue RuntimeError => ex
   puts opt.help
   exit 1
 end
+STDOUT.sync = true if $debug
 
 loop do
   ARGV.each do |target|
