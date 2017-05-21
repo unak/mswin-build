@@ -321,6 +321,10 @@ module MswinBuild
       end
     end
 
+    def define_failure_start_pattern(io, *patterns)
+      io.instance_variable_set(:@failure_start_patterns, patterns)
+    end
+
     define_buildmethod(:baseinfo) do |io, tmpdir|
       @start_time = Time.now
       @data[:start_time] = @start_time.dup.utc.strftime('%Y%m%dT%H%M%SZ')
@@ -409,6 +413,7 @@ module MswinBuild
     end
 
     define_buildmethod(:btest) do |io, tmpdir|
+      define_failure_start_pattern(io, /: $/, /:\d+:in `/)
       ret = do_command(io, "btest", 'nmake -l "OPTS=-v -q" btest', true, false)
       if !ret && !ret.nil?
         @fails << io unless @fails.include?(io)
@@ -484,6 +489,7 @@ module MswinBuild
     end
 
     define_buildmethod(:test_all) do |io, tmpdir|
+      define_failure_start_pattern(io, /\A *\d+\) (Failure|Error)/, /\A\d+ tests, \d+ assertions, [1-9]\d* failures, \d+ errors/, /\A\d+ tests, \d+ assertions, \d+ failures, [1-9]\d* errors/, /:\d+:in `/)
       ret = do_command(io, "test-all", "nmake -l TESTS=-v RUBYOPT=-w test-all", true, false, nil)
       if !ret && !ret.nil?
         io.rewind
@@ -504,6 +510,7 @@ module MswinBuild
     end
 
     define_buildmethod(:rubyspec) do |io, tmpdir|
+      define_failure_start_pattern(io, /\A1\)\n\z/, /:\d+:in `/)
       if ruby_version >= "2.5.0"
         ret = do_command(io, "rubyspec", 'nmake -l MSPECOPT="-V -f s" test-rubyspec', true, false, nil)
         if !ret && !ret.nil?
@@ -615,8 +622,18 @@ module MswinBuild
           lines = io.read.lines
           out.puts lines.shift
           total = lines.size
-          out.puts "...(snip #{total - 20} lines)..." if total > 20
-          lines.last(20).each do |line|
+          patterns = io.instance_variable_defined?(:@failure_start_patterns) ? io.instance_variable_get(:@failure_start_patterns) : []
+          patterns << /\[BUG\]/
+          start = [0, total - 10].max
+          lines.each_with_index do |line, i|
+            if patterns.find{|pat| pat =~ line}
+              start = i
+              break
+            end
+          end
+          start = [0, start - 10].max # show 10 lines before the start point
+          out.puts "...(snip #{start} lines)..." if start > 0
+          lines.last(total - start).each do |line|
             out.write h(line)
           end
         end
