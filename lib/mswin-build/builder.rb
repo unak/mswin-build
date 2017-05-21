@@ -489,7 +489,7 @@ module MswinBuild
     end
 
     define_buildmethod(:test_all) do |io, tmpdir|
-      define_failure_start_pattern(io, /\A *\d+\) (Failure|Error)/, /\A\d+ tests, \d+ assertions, [1-9]\d* failures, \d+ errors/, /\A\d+ tests, \d+ assertions, \d+ failures, [1-9]\d* errors/, /:\d+:in `/)
+      define_failure_start_pattern(io, /\A *\d+\) (Failure|Error)/, /\A\d+ tests, \d+ assertions, [1-9]\d* failures, \d+ errors/, /\A\d+ tests, \d+ assertions, \d+ failures, [1-9]\d* errors/)
       ret = do_command(io, "test-all", "nmake -l TESTS=-v RUBYOPT=-w test-all", true, false, nil)
       if !ret && !ret.nil?
         io.rewind
