@@ -52,6 +52,7 @@ module MswinBuild
       @config["timeout"]["svn/ruby"] ||= @config["timeout"]["default"]
       @config["timeout"]["svn/info"] ||= @config["timeout"]["default_short"]
       @config["timeout"]["git/ruby"] ||= @config["timeout"]["default"]
+      @config["timeout"]["git/info"] ||= @config["timeout"]["default_short"]
       @config["timeout"]["configure"] ||= @config["timeout"]["default"]
       @config["timeout"]["cc-version"] ||= @config["timeout"]["default_short"]
       @config["timeout"]["miniruby"] ||= @config["timeout"]["default"]
@@ -365,6 +366,16 @@ module MswinBuild
         Dir.chdir(tmpdir) do
           do_command(io, "git/ruby", "#{@config['git']} clone -q --branch #{@config['branch']} --depth 1 --single-branch #{@config['repository']} ruby")
         end
+        @data[:svn_url] = "https://github.com/ruby/ruby"
+
+        # git-info/ruby
+        Dir.chdir(File.join(tmpdir, "ruby")) do
+          do_command(io, "git-info/ruby", "#{@config['git']} log -1 2> NUL", true) do |s|
+            if /^commit ([\da-f]+)$/ =~ s
+              @data[:commit_hash] = $1
+            end
+          end
+        end
       else
         # svn/ruby
         Dir.chdir(tmpdir) do
@@ -623,7 +634,7 @@ module MswinBuild
             line = h(line) unless /^<a / =~ line
             out.write line
             warns += line.scan(/warn/i).length
-            if File.basename(io.path) == "checkout" && /^(?:SVN )?Last Changed Rev: (\d+)$/ =~ line
+            if !@is_git && File.basename(io.path) == "checkout" && /^(?:SVN )?Last Changed Rev: (\d+)$/ =~ line
               revision = $1
             end
           end
@@ -665,12 +676,21 @@ module MswinBuild
         title << @data[:warn]
       end
       url = @data.delete(:svn_url)
-      if revision
-        @data[:ruby_rev] = "r#{revision}"
+      commit_hash = @data.delete(:commit_hash)
+      if revision || commit_hash
+        if @is_git
+          @data[:ruby_rev] = commit_hash[0, 11]
+        else
+          @data[:ruby_rev] = "r#{revision}"
+        end
         @title.unshift(@data[:ruby_rev])
         title.unshift(@data[:ruby_rev])
         @data[:version] = "#{@data[:ruby_rev]} #{@data[:version]}"
-        @data[url] = revision
+        if @is_git
+          @data[url] = commit_hash
+        else
+          @data[url] = revision
+        end
       end
       @data.each_pair do |k, v|
         if k.is_a?(String) && /^failure_/ =~ k
