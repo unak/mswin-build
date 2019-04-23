@@ -370,8 +370,8 @@ module MswinBuild
 
         # git-info/ruby
         Dir.chdir(File.join(tmpdir, "ruby")) do
-          do_command(io, "git-info/ruby", "#{@config['git']} log -1 2> NUL", true) do |s|
-            if /^commit ([\da-f]+)$/ =~ s
+          do_command(io, "git-info/ruby", "#{@config['git']} log -1", true) do |s|
+            if /^commit ([\da-f]+)$/ =~ `#{@config['git']} log -1 2> NUL`
               @data[:commit_hash] = $1
             end
           end
