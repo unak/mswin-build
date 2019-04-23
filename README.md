@@ -16,10 +16,11 @@ A low quality clone of https://github.com/akr/chkbuild for mswin.
 Requirements
 ------------
 
-* ruby 2.1 or later
+* ruby 2.4 or later
 * sed
 * bison
 * svn
+* git
 * gzip
 * and of cource, Visual C++ 6 or newer
 
@@ -33,7 +34,7 @@ Write a config file in config directory, and run `bin/build.rb`.
 License
 -------
 
-Copyright (c) 2013 NAKAMURA Usaku usa@garbagecollect.jp
+Copyright (c) 2013-2019 NAKAMURA Usaku usa@garbagecollect.jp
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
