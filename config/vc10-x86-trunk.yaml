@@ -1,3 +1,4 @@
 baseruby:
-repository: http://svn.ruby-lang.org/repos/ruby/trunk
+repository: https://github.com/ruby/ruby.git
+branch: trunk
 logdir: logs/vc10-x86/ruby-trunk

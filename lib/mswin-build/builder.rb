@@ -22,10 +22,13 @@ module MswinBuild
       @config["baseruby"] = baseruby if baseruby
       @config["bison"] ||= "bison"
       @config["svn"] ||= "svn"
+      @config["git"] ||= "git"
       @config["gzip"] ||= "gzip"
 
       raise "baseruby not specified" unless @config["baseruby"]
       raise "repository not specified" unless @config["repository"]
+      @is_git = @config["repository"].end_with?(".git")
+      raise "branch not specified" if @is_git && @config["branch"].to_s.empty?
       raise "logdir not specfied" unless @config["logdir"]
 
       @config["azure_key"] = azure_key if azure_key
@@ -48,6 +51,7 @@ module MswinBuild
       @config["timeout"]["bison-version"] ||= @config["timeout"]["default_short"]
       @config["timeout"]["svn/ruby"] ||= @config["timeout"]["default"]
       @config["timeout"]["svn/info"] ||= @config["timeout"]["default_short"]
+      @config["timeout"]["git/ruby"] ||= @config["timeout"]["default"]
       @config["timeout"]["configure"] ||= @config["timeout"]["default"]
       @config["timeout"]["cc-version"] ||= @config["timeout"]["default_short"]
       @config["timeout"]["miniruby"] ||= @config["timeout"]["default"]
@@ -150,18 +154,26 @@ module MswinBuild
     end
 
     def get_current_revision
-      orig_lang = ENV["LANG"]
-      ENV["LANG"] = "C"
-      begin
-        if /^(?:SVN )?Last Changed Rev: (\d+)$/ =~ `#{@config['svn']} info #{@config['repository']} 2> NUL`
-          $1
-        else
+      if @is_git
+        begin
+          `#{@config['git']} ls-remote #{@config['repository']} #{@config['branch']}`.split(/ +/, 2).first
+        rescue
           nil
         end
-      rescue
-        nil
-      ensure
-        ENV["LANG"] = orig_lang
+      else
+        orig_lang = ENV["LANG"]
+        ENV["LANG"] = "C"
+        begin
+          if /^(?:SVN )?Last Changed Rev: (\d+)$/ =~ `#{@config['svn']} info #{@config['repository']} 2> NUL`
+            $1
+          else
+            nil
+          end
+        rescue
+          nil
+        ensure
+          ENV["LANG"] = orig_lang
+        end
       end
     end
 
@@ -347,16 +359,23 @@ module MswinBuild
     end
 
     define_buildmethod(:checkout) do |io, tmpdir|
-      # svn/ruby
-      Dir.chdir(tmpdir) do
-        do_command(io, "svn/ruby", "#{@config['svn']} checkout #{@config['repository']} ruby")
-      end
+      if @is_git
+        # git/ruby
+        Dir.chdir(tmpdir) do
+          do_command(io, "git/ruby", "#{@config['git']} clone -q --branch #{@config['branch']} #{@config['repository']} ruby")
+        end
+      else
+        # svn/ruby
+        Dir.chdir(tmpdir) do
+          do_command(io, "svn/ruby", "#{@config['svn']} checkout #{@config['repository']} ruby")
+        end
 
-      # svn-info/ruby
-      @builddir = File.join(tmpdir, "ruby")
-      do_command(io, "svn-info/ruby", "#{@config['svn']} info", true) do |s|
-        if /^URL: (.*)$/ =~ `#{@config['svn']} info 2> NUL`
-          @data[:svn_url] = $1
+        # svn-info/ruby
+        @builddir = File.join(tmpdir, "ruby")
+        do_command(io, "svn-info/ruby", "#{@config['svn']} info", true) do |s|
+          if /^URL: (.*)$/ =~ `#{@config['svn']} info 2> NUL`
+            @data[:svn_url] = $1
+          end
         end
       end
     end
