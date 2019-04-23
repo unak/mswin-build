@@ -359,10 +359,11 @@ module MswinBuild
     end
 
     define_buildmethod(:checkout) do |io, tmpdir|
+      @builddir = File.join(tmpdir, "ruby")
       if @is_git
         # git/ruby
         Dir.chdir(tmpdir) do
-          do_command(io, "git/ruby", "#{@config['git']} clone -q --branch #{@config['branch']} #{@config['repository']} ruby")
+          do_command(io, "git/ruby", "#{@config['git']} clone -q --branch #{@config['branch']} --depth 1 --single-branch #{@config['repository']} ruby")
         end
       else
         # svn/ruby
@@ -371,7 +372,6 @@ module MswinBuild
         end
 
         # svn-info/ruby
-        @builddir = File.join(tmpdir, "ruby")
         do_command(io, "svn-info/ruby", "#{@config['svn']} info", true) do |s|
           if /^URL: (.*)$/ =~ `#{@config['svn']} info 2> NUL`
             @data[:svn_url] = $1
