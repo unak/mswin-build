@@ -641,9 +641,11 @@ module MswinBuild
         end
       end
 
+      succeeded = false
       open(File.join(tmpdir, "failed"), "wb") do |out|
         if @fails.empty?
           out.puts "No failures"
+          succeeded = true
           break
         end
 
@@ -717,7 +719,7 @@ module MswinBuild
       failfile = File.join(logdir, @data[:start_time] + '.fail.html')
       open(logfile, "wb") do |out|
         header(out)
-        out.puts "    <p><a href=\"#{File.basename(logfile) + '.gz'}\">#{@data[:start_time]}</a>(<a href=\"#{File.basename(failfile) + '.gz'}\">failure</a>)</p>"
+        out.puts "    <p><a href=\"#{File.basename(logfile) + '.gz'}\">#{@data[:start_time]}</a>(<a href=\"#{File.basename(failfile) + '.gz'}\">#{succeeded ? "success" : "failure"}</a>)</p>"
         out.puts "    <ul>"
         @links.each_value do |anchor, text, result = nil|
           out.puts %'      <li><a href="\##{anchor}">#{text}</a>#{" #{result}" if result}</li>'
