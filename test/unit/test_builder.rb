@@ -214,7 +214,7 @@ env:
       fn2 = fn.sub(/log/, "fail")
       Zlib::GzipReader.open(log) do |gz|
         html = gz.read
-        assert_match(/<p><a href="#{fn}">[^<]+<\/a>\(<a href="#{fn2}">failure<\/a>\)<\/p>/, html)
+        assert_match(/<p><a href="#{fn}">[^<]+<\/a>\(<a href="#{fn2}">success<\/a>\)<\/p>/, html)
         assert_match(/^<a name="(.+?)" href="#{fn}\#\1">== /, html)
       end
     end
