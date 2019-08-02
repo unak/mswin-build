@@ -633,7 +633,7 @@ module MswinBuild
           io.each_line do |line|
             line = h(line) unless /^<a / =~ line
             out.write line
-            warns += line.scan(/\bwarn(?:ing)\b/i).length unless line.start_with?("-")
+            warns += line.scan(/\bwarn(?:ing)?\b/i).length unless line.start_with?("-")
             if !@is_git && File.basename(io.path) == "checkout" && /^(?:SVN )?Last Changed Rev: (\d+)$/ =~ line
               revision = $1
             end
