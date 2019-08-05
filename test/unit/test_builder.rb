@@ -168,7 +168,7 @@ env:
 
     recent = File.read(File.join(@tmpdir, "recent.html"))
     assert_match(/\bsuccess\b/, recent)
-    assert_match(/^<a href="[^"]+" name="[^"]+">[^<]+<\/a>\(<a href="[^"]+">failure<\/a>\) r12345 /, recent) #"
+    assert_match(/^<a href="[^"]+" name="[^"]+">[^<]+<\/a>\(<a href="[^"]+">success<\/a>\) r12345 /, recent) #"
     assert_not_match(/\bfailed\b/, recent)
     assert_not_match(/\bskipped\b/, recent)
 
@@ -198,7 +198,7 @@ env:
 
     recent = File.read(File.join(@tmpdir, "recent.html"))
     assert_match(/\bsuccess\b/, recent)
-    assert_match(/^<a href="[^"]+" name="[^"]+">[^<]+<\/a>\(<a href="[^"]+">failure<\/a>\) r12345 /, recent) #"
+    assert_match(/^<a href="[^"]+" name="[^"]+">[^<]+<\/a>\(<a href="[^"]+">success<\/a>\) r12345 /, recent) #"
     assert_not_match(/\bfailed\b/, recent)
 
     recent = File.read(File.join(@tmpdir, "recent.ltsv"))

@@ -115,7 +115,7 @@ module MswinBuild
             files << rubyspec(tmpdir)
           end
           files << end_(tmpdir)
-          logfile, failfile = gather_log(files, tmpdir)
+          logfile, failfile, succeeded = gather_log(files, tmpdir)
           files.each do |io|
             if io
               io.close
@@ -130,8 +130,8 @@ module MswinBuild
           failfile = gzip(failfile)
           @data[:compressed_failhtml_relpath] = File.join("log", File.basename(failfile))
 
-          add_recent(logfile, difffile, failfile)
-          add_summary(logfile, difffile, failfile)
+          add_recent(logfile, difffile, failfile, succeeded)
+          add_summary(logfile, difffile, failfile, succeeded)
 
           MswinBuild.run_upload_hooks
         end
@@ -744,7 +744,7 @@ module MswinBuild
         footer(out)
       end
 
-      return logfile, failfile
+      return logfile, failfile, succeeded
     end
 
     def diff(tmpdir, logfile)
@@ -766,15 +766,15 @@ module MswinBuild
       html.gsub(/^<a name="(.+?)">(== .*)$/, "<a name=\"\\1\" href=\"#{file}\#\\1\">\\2#{%' (<a href=\"#{orig}\#\\1\">full</a>)' if orig}")
     end
 
-    def add_recent(logfile, difffile, failfile)
-      add_recent_summary(logfile, difffile, failfile, :recent)
+    def add_recent(logfile, difffile, failfile, succeeded)
+      add_recent_summary(logfile, difffile, failfile, :recent, succeeded)
     end
 
-    def add_summary(logfile, difffile, failfile)
-      add_recent_summary(logfile, difffile, failfile, :summary)
+    def add_summary(logfile, difffile, failfile, succeeded)
+      add_recent_summary(logfile, difffile, failfile, :summary, succeeded)
     end
 
-    def add_recent_summary(logfile, difffile, failfile, mode)
+    def add_recent_summary(logfile, difffile, failfile, mode, succeeded)
       if mode == :recent
         filename = File.join(@config["logdir"], "recent.html")
       else
@@ -791,7 +791,7 @@ module MswinBuild
 
       title = @title.join(' ')
       time = @data[:start_time]
-      latest = %'<a href="log/#{File.basename(logfile)}" name="#{u time}">#{h time}</a>(<a href="log/#{File.basename(failfile)}">failure</a>) #{h title} (<a href="log/#{File.basename(difffile)}">#{@diff ? h(@diff) : "no diff"}</a>)<br>'
+      latest = %'<a href="log/#{File.basename(logfile)}" name="#{u time}">#{h time}</a>(<a href="log/#{File.basename(failfile)}">#{succeeded ? "success" : "failure"}</a>) #{h title} (<a href="log/#{File.basename(difffile)}">#{@diff ? h(@diff) : "no diff"}</a>)<br>'
       if mode == :recent
         old = old[0..99]
         old.unshift(latest)
