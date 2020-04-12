@@ -94,7 +94,7 @@ module MswinBuild
           files << checkout(tmpdir)
           if @last_status && @last_status.success?
             files << configure(tmpdir)
-            files << update_unicode(tmpdir)
+            #files << update_unicode(tmpdir)
             files << update_gems(tmpdir)
             files << extract_extlibs(tmpdir)
             files << cc_version(tmpdir)
